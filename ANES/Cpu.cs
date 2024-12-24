@@ -472,9 +472,6 @@ internal sealed class Cpu(Nes nes)
 			default: throw new UnreachableException();
 		}
 
-		if (_traceCycles >= 26554)
-			Environment.Exit(0);
-
 		_traceCycles++;
 	}
 
