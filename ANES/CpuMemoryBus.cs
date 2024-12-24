@@ -11,7 +11,7 @@ internal sealed class CpuMemoryBus
 		var rom = File.ReadAllBytes("Tests/nestest/nestest.nes");
 		rom[16..(16 + 16 * 1024)].CopyTo(_ram, 0x8000);
 		rom[16..(16 + 16 * 1024)].CopyTo(_ram, 0xC000);
-		_ram[0xFFFC] = 0;
+		_ram[0xFFFC] = 0; // Run NesTest headless
 	}
 
 	public byte ReadByte(ushort address, bool suppressSideEffects = false)
@@ -22,12 +22,5 @@ internal sealed class CpuMemoryBus
 	public void WriteByte(ushort address, byte value)
 	{
 		_ram[address] = value;
-	}
-
-	public ushort ReadWord(ushort address)
-	{
-		var lo = ReadByte(address++);
-		var hi = ReadByte(address);
-		return (ushort)(lo | (hi << 8));
 	}
 }
