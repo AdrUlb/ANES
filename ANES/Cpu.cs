@@ -424,6 +424,7 @@ internal sealed class Cpu(Nes nes)
 
 		if (_op.Instruction == CpuInstruction.None)
 		{
+			Console.WriteLine(GenerateTraceLine());
 			//Console.ReadKey(true);
 
 			// The RTI instruction affects IRQ inhibition immediately.

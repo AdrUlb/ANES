@@ -5,7 +5,7 @@ namespace ANES;
 internal sealed class Cartridge
 {
 	private readonly Mapper _mapper;
-	
+
 	public Cartridge(Nes nes, string romFilePath)
 	{
 		Console.WriteLine($"Loading ROM file: {romFilePath}");
@@ -140,7 +140,7 @@ internal sealed class Cartridge
 			mapperNumber |= b8 & 0b1111;
 			submapperNumber = (b8 >> 4) & 0b1111;
 		}
-		
+
 		var prgRom = new byte[prgRomBytes];
 		var chrRom = new byte[chrRomBytes];
 		fs.ReadExactly(prgRom);
@@ -150,7 +150,7 @@ internal sealed class Cartridge
 		Console.WriteLine($"PRG ROM: {prgRomBytes} bytes");
 		Console.WriteLine($"CHR ROM: {chrRomBytes} bytes");
 		Console.WriteLine($"Nametable layout: {nametableLayout}");
-		
+
 		_mapper = mapperNumber switch
 		{
 			0 => new Mapper0(nes, prgRom, chrRom, nametableLayout),
@@ -159,4 +159,9 @@ internal sealed class Cartridge
 
 		Console.WriteLine($"Mapper: {_mapper.Name}");
 	}
+
+	public byte CpuReadByte(ushort address, bool suppressSideEffects = false) => _mapper.CpuReadByte(address, suppressSideEffects);
+	public void CpuWriteByte(ushort address, byte value) => _mapper.CpuWriteByte(address, value);
+	public byte PpuReadByte(ushort address, bool suppressSideEffects = false) => _mapper.PpuReadByte(address, suppressSideEffects);
+	public void PpuWriteByte(ushort address, byte value) => _mapper.PpuWriteByte(address, value);
 }

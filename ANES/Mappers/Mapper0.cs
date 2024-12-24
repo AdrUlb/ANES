@@ -49,6 +49,9 @@ internal sealed class Mapper0 : Mapper
 				_nt4Offset = 0x400;
 				break;
 		}
+		
+		// FIXME: remove this, this allows NesTest to run headless
+		_prgRom[0x3FFC] = 0;
 	}
 
 	public override byte CpuReadByte(ushort address, bool suppressSideEffects = false) => address switch
