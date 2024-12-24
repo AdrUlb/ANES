@@ -2,9 +2,6 @@ namespace ANES;
 
 internal sealed class CpuMemoryBus(Nes nes)
 {
-	// TODO: Memory bus does not just consist of RAM
-
-
 	public byte ReadByte(ushort address, bool suppressSideEffects = false)
 	{
 		var value = nes.Cartridge.CpuReadByte(address, suppressSideEffects);
