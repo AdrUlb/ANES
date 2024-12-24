@@ -455,8 +455,8 @@ internal sealed class Cpu(IComputer computer)
 
 		if (_op.Instruction == CpuInstruction.None)
 		{
-			//if (_traceCycles >= 42110000)
-			if (_traceCycles % 10000000 == 0)
+			if (_traceCycles >= 42110000)
+			//if (_traceCycles % 10000000 == 0)
 				Console.WriteLine(GenerateTraceLine());
 			//	Console.ReadKey(true);
 
