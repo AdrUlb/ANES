@@ -1,6 +1,6 @@
 namespace ANES.Mappers;
 
-internal sealed class Mapper0 : Mapper
+internal sealed class Mapper0 : IMapper
 {
 	private readonly Nes _nes;
 
@@ -16,7 +16,7 @@ internal sealed class Mapper0 : Mapper
 	private readonly int _nt2Offset;
 	private readonly int _nt3Offset;
 
-	public override string Name { get; } = "NROM";
+	public string Name { get; } = "NROM";
 
 	public Mapper0(Nes nes, byte[] prgRom, byte[] chrRom, NametableLayout nametableLayout)
 	{
@@ -49,18 +49,19 @@ internal sealed class Mapper0 : Mapper
 				_nt4Offset = 0x400;
 				break;
 		}
+		_prgRom[0x3FFC] = 0;
 	}
 
-	public override byte CpuReadByte(ushort address, bool suppressSideEffects = false) => address switch
+	public byte CpuReadByte(ushort address, bool suppressSideEffects = false) => address switch
 	{
 		>= 0x8000 and <= 0xBFFF => _prgRom[address - 0x8000 + _prgBank1Offset],
 		>= 0xC000 and <= 0xFFFF => _prgRom[address - 0xC000 + _prgBank2Offset],
 		_ => 0xFF
 	};
 
-	public override void CpuWriteByte(ushort address, byte value) { }
+	public void CpuWriteByte(ushort address, byte value) { }
 
-	public override byte PpuReadByte(ushort address, bool suppressSideEffects = false)
+	public byte PpuReadByte(ushort address, bool suppressSideEffects = false)
 	{
 		if (address is >= 0x3000 and <= 0x3EFF)
 			address -= 0x1000;
@@ -76,5 +77,5 @@ internal sealed class Mapper0 : Mapper
 		};
 	}
 
-	public override void PpuWriteByte(ushort address, byte value) { }
+	public void PpuWriteByte(ushort address, byte value) { }
 }

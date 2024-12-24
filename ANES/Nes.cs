@@ -1,6 +1,6 @@
 namespace ANES;
 
-internal sealed class Nes
+internal sealed class Nes : IComputer
 {
 	private readonly Thread _thread;
 	private readonly object _startStopLock = new();
@@ -8,14 +8,16 @@ internal sealed class Nes
 
 	internal readonly byte[] Ram = new byte[0x800];
 	internal readonly byte[] Vram = new byte[0x800];
-	internal readonly CpuMemoryBus CpuMemoryBus;
+
+	public IMemoryBus CpuMemoryBus { get; }
+
 	internal readonly Cartridge Cartridge;
 	private readonly Cpu _cpu;
 
 	public Nes()
 	{
 		_thread = new(ThreadProc);
-		CpuMemoryBus = new(this);
+		CpuMemoryBus = new CpuMemoryBus(this);
 		Cartridge = new(this, "Tests/nestest/nestest.nes");
 		_cpu = new(this);
 		_cpu.Reset();
@@ -26,7 +28,8 @@ internal sealed class Nes
 		while (_keepRunning)
 		{
 			_cpu.Tick();
-			// NOTE: signal interrupts AFTER CPU tick
+			// NOTE: signal IRQs AFTER CPU tick
+			// maybe NMIs before?
 		}
 	}
 

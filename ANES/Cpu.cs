@@ -1,8 +1,9 @@
 using System.Diagnostics;
+using System.Text;
 
 namespace ANES;
 
-internal sealed class Cpu(Nes nes)
+internal sealed class Cpu(IComputer computer)
 {
 	private static readonly IReadOnlyList<CpuOperation> _operationsByOpcode =
 	[
@@ -280,12 +281,11 @@ internal sealed class Cpu(Nes nes)
 		new(CpuInstruction.Isc, CpuAddressingMode.AbsoluteXIndexed, true)
 	];
 
-
 	private const ushort _interruptVectorReset = 0xFFFC;
 	private const ushort _interruptVectorNmi = 0xFFFA;
 	private const ushort _interruptVectorIrq = 0xFFFE;
 
-	private ushort _regPc;
+	public ushort RegPc;
 	private byte _regSpLow;
 
 	private bool _flagCarry = false;
@@ -308,7 +308,6 @@ internal sealed class Cpu(Nes nes)
 	private bool _pendingNmi = false;
 	private bool _pendingIrq = false;
 
-	private bool _rtiInterruptCheck = false;
 	private bool _signalInterruptReset = false;
 	private bool _signalInterruptNmi = false;
 	private bool _signalInterruptIrq = false;
@@ -347,7 +346,7 @@ internal sealed class Cpu(Nes nes)
 
 	private byte FetchOperationByte()
 	{
-		return nes.CpuMemoryBus.ReadByte(_regPc++);
+		return computer.CpuMemoryBus.ReadByte(RegPc++);
 	}
 
 	private void FetchNextOperation()
@@ -362,37 +361,69 @@ internal sealed class Cpu(Nes nes)
 
 	private string GenerateTraceLine()
 	{
-		var b0 = nes.CpuMemoryBus.ReadByte(_regPc, true);
-		var b1 = nes.CpuMemoryBus.ReadByte((ushort)(_regPc + 1), true);
-		var b2 = nes.CpuMemoryBus.ReadByte((ushort)(_regPc + 2), true);
+		var b0 = computer.CpuMemoryBus.ReadByte(RegPc, true);
+		var b1 = computer.CpuMemoryBus.ReadByte((ushort)(RegPc + 1), true);
+		var b2 = computer.CpuMemoryBus.ReadByte((ushort)(RegPc + 2), true);
 
 		var operand16 = b1 | (b2 << 8);
 
 		var operation = _operationsByOpcode[b0];
 		var instructionString = (operation.IsIllegal ? "*" : " ") + operation.Instruction.ToString().ToUpper();
 
-		var disassembly = $"{_regPc:X4}  {b0:X2} ";
+		var line = new StringBuilder().Append(RegPc.ToString("X4")).Append("  ").Append(b0.ToString("X2")).Append(' ');
 
-		disassembly += operation.AddressingMode switch
+		string? a;
+
+		switch (operation.AddressingMode)
 		{
-			CpuAddressingMode.Accumulator => $"      {$"{instructionString} A",-33}",
-			CpuAddressingMode.Absolute => $"{b1:X2} {b2:X2} {$"{instructionString} ${operand16:X4}",-33}",
-			CpuAddressingMode.AbsoluteXIndexed => $"{b1:X2} {b2:X2} {$"{instructionString} ${operand16:X4},X",-33}",
-			CpuAddressingMode.AbsoluteYIndexed => $"{b1:X2} {b2:X2} {$"{instructionString} ${operand16:X4},Y",-33}",
-			CpuAddressingMode.Immediate => $"{b1:X2}    {$"{instructionString} #${b1:X2}",-33}",
-			CpuAddressingMode.Implied => $"      {instructionString,-33}",
-			CpuAddressingMode.Indirect => $"{b1:X2} {b2:X2} {$"{instructionString} (${operand16:X4})",-33}",
-			CpuAddressingMode.XIndexedIndirect => $"{b1:X2}    {$"{instructionString} (${b1:X2},X)",-33}",
-			CpuAddressingMode.IndirectYIndexed => $"{b1:X2}    {$"{instructionString} (${b1:X2}),Y",-33}",
-			CpuAddressingMode.Relative => $"{b1:X2}    {$"{instructionString} *{((sbyte)b1 >= -2 ? "+" : "")}{(sbyte)b1 + 2}",-33}",
-			CpuAddressingMode.ZeroPage => $"{b1:X2}    {$"{instructionString} ${b1:X2}",-33}",
-			CpuAddressingMode.ZeroPageXIndexed => $"{b1:X2}    {$"{instructionString} ${b1:X2},X",-33}",
-			CpuAddressingMode.ZeroPageYIndexed => $"{b1:X2}    {$"{instructionString} ${b1:X2},Y",-33}",
-			CpuAddressingMode.NotImplemented => $"{b1:X2} {b2:X2} {$"{instructionString} ???",-33}",
-			_ => throw new UnreachableException()
-		};
+			case CpuAddressingMode.Accumulator:
+				a = $"      {$"{instructionString} A",-33}";
+				break;
+			case CpuAddressingMode.Absolute:
+				a = $"{b1:X2} {b2:X2} {$"{instructionString} ${operand16:X4}",-33}";
+				break;
+			case CpuAddressingMode.AbsoluteXIndexed:
+				a = $"{b1:X2} {b2:X2} {$"{instructionString} ${operand16:X4},X",-33}";
+				break;
+			case CpuAddressingMode.AbsoluteYIndexed:
+				a = $"{b1:X2} {b2:X2} {$"{instructionString} ${operand16:X4},Y",-33}";
+				break;
+			case CpuAddressingMode.Immediate:
+				a = $"{b1:X2}    {$"{instructionString} #${b1:X2}",-33}";
+				break;
+			case CpuAddressingMode.Implied:
+				a = $"      {instructionString,-33}";
+				break;
+			case CpuAddressingMode.Indirect:
+				a = $"{b1:X2} {b2:X2} {$"{instructionString} (${operand16:X4})",-33}";
+				break;
+			case CpuAddressingMode.XIndexedIndirect:
+				a = $"{b1:X2}    {$"{instructionString} (${b1:X2},X)",-33}";
+				break;
+			case CpuAddressingMode.IndirectYIndexed:
+				a = $"{b1:X2}    {$"{instructionString} (${b1:X2}),Y",-33}";
+				break;
+			case CpuAddressingMode.Relative:
+				a = $"{b1:X2}    {$"{instructionString} *{((sbyte)b1 >= -2 ? "+" : "")}{(sbyte)b1 + 2}",-33}";
+				break;
+			case CpuAddressingMode.ZeroPage:
+				a = $"{b1:X2}    {$"{instructionString} ${b1:X2} = #${computer.CpuMemoryBus.ReadByte(b1, true):X2}",-33}";
+				break;
+			case CpuAddressingMode.ZeroPageXIndexed:
+				a = $"{b1:X2}    {$"{instructionString} ${b1:X2},X",-33}";
+				break;
+			case CpuAddressingMode.ZeroPageYIndexed:
+				a = $"{b1:X2}    {$"{instructionString} ${b1:X2},Y",-33}";
+				break;
+			case CpuAddressingMode.NotImplemented:
+				a = $"{b1:X2} {b2:X2} {$"{instructionString} ???",-33}";
+				break;
+			default:
+				throw new UnreachableException();
+		}
+		line.Append(a);
 
-		return $"{disassembly} A:{_regA:X2} X:{_regX:X2} Y:{_regY:X2} P:{GetStatusByte(false):X2} SP:{_regSpLow:X2} CYC:{_traceCycles}";
+		return $"{line} A:{_regA:X2} X:{_regX:X2} Y:{_regY:X2} P:{GetStatusByte(false):X2} SP:{_regSpLow:X2} CYC:{_traceCycles}";
 	}
 
 	private void SetInterruptSignals()
@@ -424,15 +455,10 @@ internal sealed class Cpu(Nes nes)
 
 		if (_op.Instruction == CpuInstruction.None)
 		{
-			Console.WriteLine(GenerateTraceLine());
-			//if (_traceCycles % 10 == 0)
+			//if (_traceCycles >= 42110000)
+			if (_traceCycles % 10000000 == 0)
+				Console.WriteLine(GenerateTraceLine());
 			//	Console.ReadKey(true);
-
-			// The RTI instruction affects IRQ inhibition immediately.
-			// If an IRQ is pending and an RTI is executed that clears the I flag, the CPU will invoke the IRQ handler immediately after RTI finishes executing.
-			// This is due to RTI restoring the I flag from the stack before polling for interrupts.
-			if (_rtiInterruptCheck)
-				SetInterruptSignals();
 
 			FetchNextOperation();
 
@@ -441,17 +467,12 @@ internal sealed class Cpu(Nes nes)
 			{
 				_op = _operationsByOpcode[0]; // Force BRK into the internal instruction register
 				_servicingInterrupt = true; // Set a flag indicating that the "B flag" is not to be set
-				_regPc--; // Undo PC increment from instruction fetch
+				RegPc--; // Undo PC increment from instruction fetch
 			}
 
 			_opCycle = 1;
 
-			if (_rtiInterruptCheck)
-			{
-				_rtiInterruptCheck = false;
-			}
-			else
-				SetInterruptSignals();
+			SetInterruptSignals();
 		}
 
 		switch (_op.AddressingMode)
@@ -496,7 +517,7 @@ internal sealed class Cpu(Nes nes)
 								_internalAddress |= (ushort)(FetchOperationByte() << 8);
 								break;
 							case 4: // read from effective address
-								_internalOperand = nes.CpuMemoryBus.ReadByte(_internalAddress);
+								_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
 								ExecInst();
 								_op = CpuOperation.None;
 								break;
@@ -514,14 +535,14 @@ internal sealed class Cpu(Nes nes)
 								_internalAddress |= (ushort)(FetchOperationByte() << 8);
 								break;
 							case 4: // read from effective address
-								_internalOperand = nes.CpuMemoryBus.ReadByte(_internalAddress);
+								_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
 								break;
 							case 5: // write the value back to effective address, and do the operation on it
-								nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+								computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 								ExecInst();
 								break;
 							case 6: // write the new value to effective address
-								nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+								computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 								_op = CpuOperation.None;
 								break;
 						}
@@ -539,7 +560,7 @@ internal sealed class Cpu(Nes nes)
 								break;
 							case 4: // write register to effective address
 								ExecInst();
-								nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+								computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 								_op = CpuOperation.None;
 								break;
 						}
@@ -560,7 +581,7 @@ internal sealed class Cpu(Nes nes)
 					break;
 				case 3: // copy low address byte to PCL, fetch high address byte to PCH
 					_internalAddress |= (ushort)(FetchOperationByte() << 8);
-					_regPc = _internalAddress;
+					RegPc = _internalAddress;
 					_op = CpuOperation.None;
 					break;
 			}
@@ -578,16 +599,16 @@ internal sealed class Cpu(Nes nes)
 				case 3: // internal operation (predecrement S?)
 					break;
 				case 4: // push PCH on stack, decrement S
-					nes.CpuMemoryBus.WriteByte(RegSp, (byte)(_regPc >> 8));
+					computer.CpuMemoryBus.WriteByte(RegSp, (byte)(RegPc >> 8));
 					_regSpLow--;
 					break;
 				case 5: // push PCL on stack, decrement S
-					nes.CpuMemoryBus.WriteByte(RegSp, (byte)(_regPc & 0xFF));
+					computer.CpuMemoryBus.WriteByte(RegSp, (byte)(RegPc & 0xFF));
 					_regSpLow--;
 					break;
 				case 6: // copy low address byte to PCL, fetch high address byte to PCH
 					_internalAddress |= (ushort)(FetchOperationByte() << 8);
-					_regPc = _internalAddress;
+					RegPc = _internalAddress;
 					_op = CpuOperation.None;
 					break;
 			}
@@ -611,7 +632,7 @@ internal sealed class Cpu(Nes nes)
 					case 1: // fetch opcode, increment PC
 						break;
 					case 2: // read next instruction byte (and throw it away)
-						nes.CpuMemoryBus.ReadByte(_regPc);
+						computer.CpuMemoryBus.ReadByte(RegPc);
 
 						// Accumulator becomes the operand
 						_internalOperand = _regA;
@@ -636,17 +657,17 @@ internal sealed class Cpu(Nes nes)
 			{
 				case 1: // fetch opcode, increment PC
 				case 2: // read next instruction byte (and throw it away), increment PC if not serving an interrupt
-					nes.CpuMemoryBus.ReadByte(_regPc);
+					computer.CpuMemoryBus.ReadByte(RegPc);
 					if (!_servicingInterrupt)
-						_regPc++;
+						RegPc++;
 
 					break;
 				case 3: // push PCH on stack, decrement S
-					nes.CpuMemoryBus.WriteByte(RegSp, (byte)(_regPc >> 8));
+					computer.CpuMemoryBus.WriteByte(RegSp, (byte)(RegPc >> 8));
 					_regSpLow--;
 					break;
 				case 4: // push PCL on stack, decrement S
-					nes.CpuMemoryBus.WriteByte(RegSp, (byte)(_regPc & 0xFF));
+					computer.CpuMemoryBus.WriteByte(RegSp, (byte)(RegPc & 0xFF));
 					_regSpLow--;
 
 					// Facilitate "interrupt hijacking"
@@ -668,15 +689,15 @@ internal sealed class Cpu(Nes nes)
 
 					break;
 				case 5: // push P on stack (with B flag set if not servicing an interrupt), decrement S
-					nes.CpuMemoryBus.WriteByte(RegSp, GetStatusByte(!_servicingInterrupt));
+					computer.CpuMemoryBus.WriteByte(RegSp, GetStatusByte(!_servicingInterrupt));
 					_regSpLow--;
 					break;
 				case 6: // Fetch PCL
-					_regPc = nes.CpuMemoryBus.ReadByte(_internalAddress++);
+					RegPc = computer.CpuMemoryBus.ReadByte(_internalAddress++);
 					_flagInterruptDisable = true;
 					break;
 				case 7: // Fetch PCH
-					_regPc |= (ushort)(nes.CpuMemoryBus.ReadByte(_internalAddress++) << 8);
+					RegPc |= (ushort)(computer.CpuMemoryBus.ReadByte(_internalAddress++) << 8);
 					_servicingInterrupt = false; // No longer servicing an interrupt
 					// Interrupts are always ignored for the first instruction of an interrupt handler
 					//	(obviously true for IRQ and BRK as the interrupt disable flag is set, but even NMIs are delayed!)
@@ -695,22 +716,29 @@ internal sealed class Cpu(Nes nes)
 				case 1: // fetch opcode, increment PC
 					break;
 				case 2: // read next instruction byte (and throw it away)
-					nes.CpuMemoryBus.ReadByte(_regPc);
+					computer.CpuMemoryBus.ReadByte(RegPc);
 					break;
 				case 3: // increment S
 					_regSpLow++;
 					break;
 				case 4: // pull P from stack, increment S
-					SetStatusByte(nes.CpuMemoryBus.ReadByte(RegSp));
+					// The RTI instruction affects IRQ inhibition immediately.
+					// If an IRQ is pending and an RTI is executed that clears the I flag, the CPU will invoke the IRQ handler immediately after RTI finishes executing.
+					// This is due to RTI restoring the I flag from the stack before polling for interrupts.
+					var prevI = _flagInterruptDisable;
+
+					SetStatusByte(computer.CpuMemoryBus.ReadByte(RegSp));
+
+					if (prevI && !_flagInterruptDisable && _pendingIrq)
+						_signalInterruptIrq = true;
 					_regSpLow++;
 					break;
 				case 5: // pull PCL from stack, increment S
-					_regPc = nes.CpuMemoryBus.ReadByte(RegSp);
+					RegPc = computer.CpuMemoryBus.ReadByte(RegSp);
 					_regSpLow++;
 					break;
 				case 6: // pull PCH from stack
-					_regPc |= (ushort)(nes.CpuMemoryBus.ReadByte(RegSp) << 8);
-					_rtiInterruptCheck = true;
+					RegPc |= (ushort)(computer.CpuMemoryBus.ReadByte(RegSp) << 8);
 					_op = CpuOperation.None;
 					break;
 			}
@@ -723,20 +751,20 @@ internal sealed class Cpu(Nes nes)
 				case 1: // fetch opcode, increment PC
 					break;
 				case 2: // read next instruction byte (and throw it away)
-					nes.CpuMemoryBus.ReadByte(_regPc);
+					computer.CpuMemoryBus.ReadByte(RegPc);
 					break;
 				case 3: // increment S
 					_regSpLow++;
 					break;
 				case 4: // pull PCL from stack, increment S
-					_regPc = nes.CpuMemoryBus.ReadByte(RegSp);
+					RegPc = computer.CpuMemoryBus.ReadByte(RegSp);
 					_regSpLow++;
 					break;
 				case 5: // pull PCH from stack
-					_regPc |= (ushort)(nes.CpuMemoryBus.ReadByte(RegSp) << 8);
+					RegPc |= (ushort)(computer.CpuMemoryBus.ReadByte(RegSp) << 8);
 					break;
 				case 6: // increment PC
-					_regPc++;
+					RegPc++;
 					_op = CpuOperation.None;
 					break;
 			}
@@ -749,10 +777,10 @@ internal sealed class Cpu(Nes nes)
 				case 1: // fetch opcode, increment PC
 					break;
 				case 2: // read next instruction byte (and throw it away)
-					nes.CpuMemoryBus.ReadByte(_regPc);
+					computer.CpuMemoryBus.ReadByte(RegPc);
 					break;
 				case 3: // push register on stack, decrement S
-					nes.CpuMemoryBus.WriteByte(RegSp, _regA);
+					computer.CpuMemoryBus.WriteByte(RegSp, _regA);
 					_regSpLow--;
 					_op = CpuOperation.None;
 					break;
@@ -766,10 +794,10 @@ internal sealed class Cpu(Nes nes)
 				case 1: // fetch opcode, increment PC
 					break;
 				case 2: // read next instruction byte (and throw it away)
-					nes.CpuMemoryBus.ReadByte(_regPc);
+					computer.CpuMemoryBus.ReadByte(RegPc);
 					break;
 				case 3: // push register on stack, decrement S
-					nes.CpuMemoryBus.WriteByte(RegSp, GetStatusByte(true));
+					computer.CpuMemoryBus.WriteByte(RegSp, GetStatusByte(true));
 					_regSpLow--;
 					_op = CpuOperation.None;
 					break;
@@ -783,13 +811,13 @@ internal sealed class Cpu(Nes nes)
 				case 1: // fetch opcode, increment PC
 					break;
 				case 2: // read next instruction byte (and throw it away)
-					nes.CpuMemoryBus.ReadByte(_regPc);
+					computer.CpuMemoryBus.ReadByte(RegPc);
 					break;
 				case 3: // increment S
 					_regSpLow++;
 					break;
 				case 4: // pull register from stack
-					_regA = nes.CpuMemoryBus.ReadByte(RegSp);
+					_regA = computer.CpuMemoryBus.ReadByte(RegSp);
 					_flagNegative = (sbyte)_regA < 0;
 					_flagZero = _regA == 0;
 					_op = CpuOperation.None;
@@ -804,13 +832,13 @@ internal sealed class Cpu(Nes nes)
 				case 1: // fetch opcode, increment PC
 					break;
 				case 2: // read next instruction byte (and throw it away)
-					nes.CpuMemoryBus.ReadByte(_regPc);
+					computer.CpuMemoryBus.ReadByte(RegPc);
 					break;
 				case 3: // increment S
 					_regSpLow++;
 					break;
 				case 4: // pull register from stack
-					SetStatusByte(nes.CpuMemoryBus.ReadByte(RegSp));
+					SetStatusByte(computer.CpuMemoryBus.ReadByte(RegSp));
 					_op = CpuOperation.None;
 					break;
 			}
@@ -839,11 +867,11 @@ internal sealed class Cpu(Nes nes)
 					_internalAddress |= (ushort)(FetchOperationByte() << 8);
 					break;
 				case 4: // fetch low address to latch
-					_internalOperand = nes.CpuMemoryBus.ReadByte(_internalAddress);
+					_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
 					break;
 				case 5: // fetch PCH, copy latch to PCL
 					_internalAddress = (ushort)((_internalAddress & 0xFF00) | ((_internalAddress + 1) & 0x00FF));
-					_regPc = (ushort)((_internalOperand) | (nes.CpuMemoryBus.ReadByte(_internalAddress) << 8));
+					RegPc = (ushort)((_internalOperand) | (computer.CpuMemoryBus.ReadByte(_internalAddress) << 8));
 					_op = CpuOperation.None;
 					break;
 			}
@@ -864,17 +892,17 @@ internal sealed class Cpu(Nes nes)
 						_internalOperand = FetchOperationByte();
 						break;
 					case 3: // read from the address, add X to it
-						nes.CpuMemoryBus.ReadByte(_internalOperand);
+						computer.CpuMemoryBus.ReadByte(_internalOperand);
 						_internalOperand += _regX;
 						break;
 					case 4: // fetch effective address low
-						_internalAddress = nes.CpuMemoryBus.ReadByte(_internalOperand++);
+						_internalAddress = computer.CpuMemoryBus.ReadByte(_internalOperand++);
 						break;
 					case 5: // fetch effective address high
-						_internalAddress |= (ushort)(nes.CpuMemoryBus.ReadByte(_internalOperand) << 8);
+						_internalAddress |= (ushort)(computer.CpuMemoryBus.ReadByte(_internalOperand) << 8);
 						break;
 					case 6: // read from effective address
-						_internalOperand = nes.CpuMemoryBus.ReadByte(_internalAddress);
+						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
 						ExecInst();
 						_op = CpuOperation.None;
 						break;
@@ -889,24 +917,24 @@ internal sealed class Cpu(Nes nes)
 						_internalOperand = FetchOperationByte();
 						break;
 					case 3: // read from the address, add X to it
-						nes.CpuMemoryBus.ReadByte(_internalOperand);
+						computer.CpuMemoryBus.ReadByte(_internalOperand);
 						_internalOperand += _regX;
 						break;
 					case 4: // fetch effective address low
-						_internalAddress = nes.CpuMemoryBus.ReadByte(_internalOperand++);
+						_internalAddress = computer.CpuMemoryBus.ReadByte(_internalOperand++);
 						break;
 					case 5: // fetch effective address high
-						_internalAddress |= (ushort)(nes.CpuMemoryBus.ReadByte(_internalOperand) << 8);
+						_internalAddress |= (ushort)(computer.CpuMemoryBus.ReadByte(_internalOperand) << 8);
 						break;
 					case 6: // read from effective address
-						_internalOperand = nes.CpuMemoryBus.ReadByte(_internalAddress);
+						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
 						break;
 					case 7: // write the value back to effective address, and do the operation on it
-						nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 						ExecInst();
 						break;
 					case 8: // write the new value to effective address;
-						nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 						_op = CpuOperation.None;
 						break;
 				}
@@ -920,18 +948,18 @@ internal sealed class Cpu(Nes nes)
 						_internalOperand = FetchOperationByte();
 						break;
 					case 3: // read from the address, add X to it
-						nes.CpuMemoryBus.ReadByte(_internalOperand);
+						computer.CpuMemoryBus.ReadByte(_internalOperand);
 						_internalOperand += _regX;
 						break;
 					case 4: // fetch effective address low
-						_internalAddress = nes.CpuMemoryBus.ReadByte(_internalOperand++);
+						_internalAddress = computer.CpuMemoryBus.ReadByte(_internalOperand++);
 						break;
 					case 5: // fetch effective address high
-						_internalAddress |= (ushort)(nes.CpuMemoryBus.ReadByte(_internalOperand) << 8);
+						_internalAddress |= (ushort)(computer.CpuMemoryBus.ReadByte(_internalOperand) << 8);
 						break;
 					case 6: // write to effective address
 						ExecInst();
-						nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 						_op = CpuOperation.None;
 						break;
 				}
@@ -952,7 +980,7 @@ internal sealed class Cpu(Nes nes)
 						_internalOperand = FetchOperationByte();
 						break;
 					case 3: // fetch effective address low
-						_internalAddress = nes.CpuMemoryBus.ReadByte(_internalOperand++);
+						_internalAddress = computer.CpuMemoryBus.ReadByte(_internalOperand++);
 						break;
 					case 4: // fetch effective address high, add Y to low byte of effective address
 						// Add Y to low byte, if high byte does not need to be fixed skip cycle 5
@@ -961,14 +989,14 @@ internal sealed class Cpu(Nes nes)
 							_opCycle++;
 						_internalAddress &= 0x00FF;
 
-						_internalAddress |= (ushort)(nes.CpuMemoryBus.ReadByte(_internalOperand) << 8);
+						_internalAddress |= (ushort)(computer.CpuMemoryBus.ReadByte(_internalOperand) << 8);
 						break;
 					case 5: // read from effective address, fix high byte of effective address
-						nes.CpuMemoryBus.ReadByte(_internalAddress);
+						computer.CpuMemoryBus.ReadByte(_internalAddress);
 						_internalAddress += 0x0100;
 						break;
 					case 6: // read from effective address
-						_internalOperand = nes.CpuMemoryBus.ReadByte(_internalAddress);
+						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
 						ExecInst();
 						_op = CpuOperation.None;
 						break;
@@ -983,7 +1011,7 @@ internal sealed class Cpu(Nes nes)
 						_internalOperand = FetchOperationByte();
 						break;
 					case 3: // fetch effective address low
-						_internalAddress = nes.CpuMemoryBus.ReadByte(_internalOperand++);
+						_internalAddress = computer.CpuMemoryBus.ReadByte(_internalOperand++);
 						break;
 					case 4: // fetch effective address high, add Y to low byte of effective address
 						{
@@ -992,24 +1020,24 @@ internal sealed class Cpu(Nes nes)
 							var mustAdjust = _internalAddress > 0xFF;
 							_internalAddress &= 0x00FF;
 
-							_internalAddress |= (ushort)(nes.CpuMemoryBus.ReadByte(_internalOperand) << 8);
+							_internalAddress |= (ushort)(computer.CpuMemoryBus.ReadByte(_internalOperand) << 8);
 							_internalOperand = (byte)(mustAdjust ? 1 : 0);
 							break;
 						}
 					case 5: // read from effective address, fix high byte of effective address
-						nes.CpuMemoryBus.ReadByte(_internalAddress);
+						computer.CpuMemoryBus.ReadByte(_internalAddress);
 						if (_internalOperand != 0)
 							_internalAddress += 0x100;
 						break;
 					case 6: // read from effective address
-						_internalOperand = nes.CpuMemoryBus.ReadByte(_internalAddress);
+						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
 						break;
 					case 7: // write the value back to effective address, and do the operation on it
-						nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 						ExecInst();
 						break;
 					case 8: // write the new value to effective address
-						nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 						_op = CpuOperation.None;
 						break;
 				}
@@ -1023,7 +1051,7 @@ internal sealed class Cpu(Nes nes)
 						_internalOperand = FetchOperationByte();
 						break;
 					case 3: // fetch effective address low
-						_internalAddress = nes.CpuMemoryBus.ReadByte(_internalOperand++);
+						_internalAddress = computer.CpuMemoryBus.ReadByte(_internalOperand++);
 						break;
 					case 4: // fetch effective address high, add Y to low byte of effective address
 						{
@@ -1032,18 +1060,18 @@ internal sealed class Cpu(Nes nes)
 							var mustAdjust = _internalAddress > 0xFF;
 							_internalAddress &= 0x00FF;
 
-							_internalAddress |= (ushort)(nes.CpuMemoryBus.ReadByte(_internalOperand) << 8);
+							_internalAddress |= (ushort)(computer.CpuMemoryBus.ReadByte(_internalOperand) << 8);
 							_internalOperand = (byte)(mustAdjust ? 1 : 0);
 							break;
 						}
 					case 5: // read from effective address, fix high byte of effective address
-						nes.CpuMemoryBus.ReadByte(_internalAddress);
+						computer.CpuMemoryBus.ReadByte(_internalAddress);
 						if (_internalOperand != 0)
 							_internalAddress += 0x100;
 						break;
 					case 6: // write to effective address
 						ExecInst();
-						nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 						_op = CpuOperation.None;
 						break;
 				}
@@ -1082,26 +1110,27 @@ internal sealed class Cpu(Nes nes)
 			case 3: // Fetch opcode of next instruction, add operand to PCL.
 				{
 					// Even if the branch is taken the next instruction opcode is fetched
-					nes.CpuMemoryBus.ReadByte(_regPc);
+					computer.CpuMemoryBus.ReadByte(RegPc);
 
-					var expectedPc = (ushort)(_regPc + (sbyte)_internalOperand);
+					var expectedPc = (ushort)(RegPc + (sbyte)_internalOperand);
 
-					_regPc = (ushort)(
-						(_regPc & 0xFF00) | // Preserve high byte
-						((_regPc + (sbyte)_internalOperand) & 0x00FF) // Add operand to low byte
+					RegPc = (ushort)(
+						(RegPc & 0xFF00) | // Preserve high byte
+						((RegPc + (sbyte)_internalOperand) & 0x00FF) // Add operand to low byte
 					);
 
 					// If expected PC and actual PC match no additional cycle is required to fix PCs high byte
-					if (_regPc == expectedPc)
+
+					if (RegPc == expectedPc)
 						_op = CpuOperation.None;
 					else
-						_internalOperand = (byte)(_regPc < 1 ? 1 : -1);
+						_internalOperand = (byte)(expectedPc >> 8);
 
 					break;
 				}
 			case 4: // Fetch opcode of next instruction. Fix PCH.
-				nes.CpuMemoryBus.ReadByte(_regPc);
-				_regPc += (ushort)(0x100 * _internalOperand);
+				computer.CpuMemoryBus.ReadByte(RegPc);
+				RegPc = (ushort)((RegPc & 0x00FF) | (_internalOperand << 8));
 				_op = CpuOperation.None;
 				break;
 		}
@@ -1120,7 +1149,7 @@ internal sealed class Cpu(Nes nes)
 						_internalAddress = FetchOperationByte();
 						break;
 					case 3: // read from effective address
-						_internalOperand = nes.CpuMemoryBus.ReadByte(_internalAddress);
+						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
 						ExecInst();
 						_op = CpuOperation.None;
 						break;
@@ -1135,14 +1164,14 @@ internal sealed class Cpu(Nes nes)
 						_internalAddress = FetchOperationByte();
 						break;
 					case 3: // read from effective address
-						_internalOperand = nes.CpuMemoryBus.ReadByte(_internalAddress);
+						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
 						break;
 					case 4: // write the value back to effective address, and do the operation on it
-						nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 						ExecInst();
 						break;
 					case 5: // write the new value to effective address
-						nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 						_op = CpuOperation.None;
 						break;
 				}
@@ -1157,7 +1186,7 @@ internal sealed class Cpu(Nes nes)
 						break;
 					case 3: // write register to effective address
 						ExecInst();
-						nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 						_op = CpuOperation.None;
 						break;
 				}
@@ -1178,12 +1207,12 @@ internal sealed class Cpu(Nes nes)
 						_internalAddress = FetchOperationByte();
 						break;
 					case 3: // read from address, add index register to it
-						nes.CpuMemoryBus.ReadByte(_internalAddress);
+						computer.CpuMemoryBus.ReadByte(_internalAddress);
 						_internalAddress += regIndex;
 						_internalAddress &= 0x00FF;
 						break;
 					case 4: // read from effective address
-						_internalOperand = nes.CpuMemoryBus.ReadByte(_internalAddress);
+						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
 						ExecInst();
 						_op = CpuOperation.None;
 						break;
@@ -1198,19 +1227,19 @@ internal sealed class Cpu(Nes nes)
 						_internalAddress = FetchOperationByte();
 						break;
 					case 3: // read from address, add index register to it
-						nes.CpuMemoryBus.ReadByte(_internalAddress);
+						computer.CpuMemoryBus.ReadByte(_internalAddress);
 						_internalAddress += regIndex;
 						_internalAddress &= 0x00FF;
 						break;
 					case 4: // read from effective address
-						_internalOperand = nes.CpuMemoryBus.ReadByte(_internalAddress);
+						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
 						break;
 					case 5: // write the value back to effective address, and do the operation on it
-						nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 						ExecInst();
 						break;
 					case 6: // write the new value to effective address
-						nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 						_op = CpuOperation.None;
 						break;
 				}
@@ -1224,13 +1253,13 @@ internal sealed class Cpu(Nes nes)
 						_internalAddress = FetchOperationByte();
 						break;
 					case 3: // read from address, add index register to it
-						nes.CpuMemoryBus.ReadByte(_internalAddress);
+						computer.CpuMemoryBus.ReadByte(_internalAddress);
 						_internalAddress += regIndex;
 						_internalAddress &= 0x00FF;
 						break;
 					case 4: // write to effective address
 						ExecInst();
-						nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 						_op = CpuOperation.None;
 						break;
 				}
@@ -1259,11 +1288,11 @@ internal sealed class Cpu(Nes nes)
 						_internalAddress |= (ushort)(FetchOperationByte() << 8);
 						break;
 					case 4: // read from effective address, fix the high byte of effective address
-						nes.CpuMemoryBus.ReadByte(_internalAddress);
+						computer.CpuMemoryBus.ReadByte(_internalAddress);
 						_internalAddress += 0x0100;
 						break;
 					case 5: // re-read from effective address
-						_internalOperand = nes.CpuMemoryBus.ReadByte(_internalAddress);
+						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
 						ExecInst();
 						_op = CpuOperation.None;
 						break;
@@ -1286,19 +1315,19 @@ internal sealed class Cpu(Nes nes)
 						_internalOperand = (byte)(mustAdjust ? 1 : 0);
 						break;
 					case 4: // read from effective address, fix the high byte of effective address
-						nes.CpuMemoryBus.ReadByte(_internalAddress);
+						computer.CpuMemoryBus.ReadByte(_internalAddress);
 						if (_internalOperand != 0)
 							_internalAddress += 0x100;
 						break;
 					case 5: // re-read from effective address
-						_internalOperand = nes.CpuMemoryBus.ReadByte(_internalAddress);
+						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
 						break;
 					case 6: // write the value back to effective address, and do the operation on it
-						nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 						ExecInst();
 						break;
 					case 7: // write the new value to effective address
-						nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 						_op = CpuOperation.None;
 						break;
 				}
@@ -1320,13 +1349,13 @@ internal sealed class Cpu(Nes nes)
 						_internalOperand = (byte)(mustAdjust ? 1 : 0);
 						break;
 					case 4: // read from effective address, fix the high byte of effective address
-						nes.CpuMemoryBus.ReadByte(_internalAddress);
+						computer.CpuMemoryBus.ReadByte(_internalAddress);
 						if (_internalOperand != 0)
 							_internalAddress += 0x100;
 						break;
 					case 5: // write to effective address
 						ExecInst();
-						nes.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
 						_op = CpuOperation.None;
 						break;
 				}
@@ -1407,12 +1436,14 @@ internal sealed class Cpu(Nes nes)
 		void InstAdc()
 		{
 			var result = _regA + _internalOperand + (_flagCarry ? 1 : 0);
-			var signedResult = (sbyte)_regA + (sbyte)_internalOperand + (_flagCarry ? 1 : 0);
-			_regA = (byte)result;
-			_flagNegative = (sbyte)_regA < 0;
-			_flagZero = _regA == 0;
+			var resultByte = (byte)result;
+
+			_flagNegative = (sbyte)resultByte < 0;
+			_flagZero = resultByte == 0;
 			_flagCarry = result > 0xFF;
-			_flagOverflow = ((sbyte)_regA > 0 && signedResult < 0) || ((sbyte)_regA < 0 && signedResult > 0);
+			_flagOverflow = ((_regA ^ resultByte) & (_internalOperand ^ resultByte) & 0x80) != 0;
+
+			_regA = resultByte;
 		}
 
 		void InstAnd()
@@ -1575,15 +1606,8 @@ internal sealed class Cpu(Nes nes)
 
 		void InstSbc()
 		{
-			var result = _regA - _internalOperand - (_flagCarry ? 0 : 1);
-			var signedResult = (sbyte)_regA - (sbyte)_internalOperand - (_flagCarry ? 0 : 1);
-			var resultByte = (byte)result;
-			_flagNegative = (sbyte)result < 0;
-			_flagZero = (sbyte)result == 0;
-			_flagCarry = _regA >= _internalOperand;
-			_flagOverflow = ((sbyte)resultByte > 0 && signedResult < 0) || ((sbyte)resultByte < 0 && signedResult > 0);
-
-			_regA = resultByte;
+			_internalOperand ^= 0xFF;
+			InstAdc();
 		}
 
 		void InstSec() => _flagCarry = true;
