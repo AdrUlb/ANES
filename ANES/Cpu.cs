@@ -425,7 +425,8 @@ internal sealed class Cpu(Nes nes)
 		if (_op.Instruction == CpuInstruction.None)
 		{
 			Console.WriteLine(GenerateTraceLine());
-			//Console.ReadKey(true);
+			//if (_traceCycles % 10 == 0)
+			//	Console.ReadKey(true);
 
 			// The RTI instruction affects IRQ inhibition immediately.
 			// If an IRQ is pending and an RTI is executed that clears the I flag, the CPU will invoke the IRQ handler immediately after RTI finishes executing.
@@ -444,7 +445,6 @@ internal sealed class Cpu(Nes nes)
 			}
 
 			_opCycle = 1;
-
 
 			if (_rtiInterruptCheck)
 			{
@@ -1094,12 +1094,14 @@ internal sealed class Cpu(Nes nes)
 					// If expected PC and actual PC match no additional cycle is required to fix PCs high byte
 					if (_regPc == expectedPc)
 						_op = CpuOperation.None;
+					else
+						_internalOperand = (byte)(_regPc < 1 ? 1 : -1);
 
 					break;
 				}
 			case 4: // Fetch opcode of next instruction. Fix PCH.
 				nes.CpuMemoryBus.ReadByte(_regPc);
-				_regPc += 0x100;
+				_regPc += (ushort)(0x100 * _internalOperand);
 				_op = CpuOperation.None;
 				break;
 		}
