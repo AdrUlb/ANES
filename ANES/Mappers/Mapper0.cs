@@ -49,7 +49,6 @@ internal sealed class Mapper0 : IMapper
 				_nt4Offset = 0x400;
 				break;
 		}
-		_prgRom[0x3FFC] = 0;
 	}
 
 	public byte CpuReadByte(ushort address, bool suppressSideEffects = false) => address switch

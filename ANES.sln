@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ANES", "ANES\ANES.csproj", "{E8546440-A324-4686-859D-36D94F6B6C16}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sdl3Sharp", "Sdl3Sharp\Sdl3Sharp.csproj", "{5326F9DC-3517-43F7-A4CA-A01678001C7C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{E8546440-A324-4686-859D-36D94F6B6C16}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E8546440-A324-4686-859D-36D94F6B6C16}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E8546440-A324-4686-859D-36D94F6B6C16}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5326F9DC-3517-43F7-A4CA-A01678001C7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5326F9DC-3517-43F7-A4CA-A01678001C7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5326F9DC-3517-43F7-A4CA-A01678001C7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5326F9DC-3517-43F7-A4CA-A01678001C7C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
