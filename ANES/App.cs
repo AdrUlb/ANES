@@ -10,35 +10,37 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 
 	private SdlWindow _patternTableWindow = null!;
 	private SdlRenderer _patternTableRenderer = null!;
-	private SdlTexture _patternTable0Tex = null!;
-	private SdlTexture _patternTable1Tex = null!;
 	private SdlWindowId _patternTableWindowId;
+	private SdlTexture _patternTableTex = null!;
 
 	private const int _patternTableWidth = 8 * 16;
 	private const int _patternTableHeight = 8 * 16;
 	private const int _patternTablePadding = 8;
 	private readonly byte[] _palette = File.ReadAllBytes("Palette.pal");
 
+	private int _windowCount = 0;
+
 	private const int _scale = 3;
 
 	protected override SdlAppResult Init()
 	{
-		(_patternTableWindow, _patternTableRenderer) = SdlWindow.CreateWithRenderer("ANES - Debug", (_patternTableWidth * 2 + _patternTablePadding * 3) * _scale,
-			(_patternTableHeight + _patternTablePadding * 2) * _scale);
-
+		(_patternTableWindow, _patternTableRenderer) = SdlWindow.CreateWithRenderer(
+			"ANES - Pattern Tables",
+			(_patternTableWidth * 2 + _patternTablePadding * 3) * _scale,
+			(_patternTableHeight + _patternTablePadding * 2) * _scale
+		);
 		_patternTableWindowId = _patternTableWindow.GetId();
+		_windowCount++;
 
 		var tilesTexProps = SdlProperties.Create();
 		tilesTexProps.Set(SdlProperties.TextureCreateAccess, (long)SdlTextureAccess.Streaming);
 		tilesTexProps.Set(SdlProperties.TextureCreateWidth, _patternTableWidth);
 		tilesTexProps.Set(SdlProperties.TextureCreateHeight, _patternTableHeight);
 		tilesTexProps.Set(SdlProperties.TextureCreateFormat, (long)SdlPixelFormat.Rgba8888);
-		_patternTable0Tex = SdlTexture.CreateWithProperties(_patternTableRenderer, tilesTexProps);
-		_patternTable1Tex = SdlTexture.CreateWithProperties(_patternTableRenderer, tilesTexProps);
+		_patternTableTex = SdlTexture.CreateWithProperties(_patternTableRenderer, tilesTexProps);
 		tilesTexProps.Destroy();
 
-		_patternTable0Tex.SetScaleMode(SdlScaleMode.Nearest);
-		_patternTable1Tex.SetScaleMode(SdlScaleMode.Nearest);
+		_patternTableTex.SetScaleMode(SdlScaleMode.Nearest);
 
 		_nes.Start();
 
@@ -50,16 +52,16 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 		_patternTableRenderer.SetDrawColor(Color.White);
 		_patternTableRenderer.Clear();
 
-		CopyTiles(_patternTable0Tex, 0);
-		CopyTiles(_patternTable1Tex, 1);
+		_patternTableRenderer.SetScale(_scale, _scale);
 
 		var patternTable0Target = new RectangleF(_patternTablePadding, _patternTablePadding, _patternTableWidth, _patternTableHeight);
 		var patternTable1Target = new RectangleF(_patternTablePadding * 2 + _patternTableWidth, _patternTablePadding, _patternTableWidth, _patternTableHeight);
 
-		_patternTableRenderer.SetScale(_scale, _scale);
+		CopyTiles(_patternTableTex, 0);
+		_patternTableTex.Render(RectangleF.Empty, patternTable0Target);
 
-		_patternTable0Tex.Render(RectangleF.Empty, patternTable0Target);
-		_patternTable1Tex.Render(RectangleF.Empty, patternTable1Target);
+		CopyTiles(_patternTableTex, 1);
+		_patternTableTex.Render(RectangleF.Empty, patternTable1Target);
 
 		_patternTableRenderer.SetScale(2, 2);
 
@@ -79,30 +81,29 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 		if (surface.Format != SdlPixelFormat.Rgba8888)
 			throw new UnreachableException();
 
-		for (var tileY = 0; tileY < 16; tileY++)
+		for (var y = 0; y < 16; y++)
 		{
-			for (var tileX = 0; tileX < 16; tileX++)
+			for (var x = 0; x < 16; x++)
 			{
-				var texX = tileX * 8;
-				var texY = tileY * 8;
+				var surfX = x * 8;
+				var surfY = y * 8;
+				var tileIndex = x + y * 16;
 
-				CopyTile(surface, texX, texY, patternTableHalf, tileX, tileY);
+				CopyTile(surface, surfX, surfY, patternTableHalf, tileIndex);
 			}
 		}
 
 		tilesTex.Unlock();
 	}
 
-	private void CopyTile(SdlSurface surface, int surfX, int surfY, int patternTableHalf, int tileX, int tileY)
+	private void CopyTile(SdlSurface surface, int surfX, int surfY, int patternTableHalf, int tileIndex)
 	{
-		var tileNum = tileX + tileY * 16;
-
 		var pixels = surface.GetPixels<uint>();
 
 		for (var y = 0; y < 8; y++)
 		{
-			var plane0Index = (patternTableHalf << 12) | (tileNum << 4) | y;
-			var plane1Index = (patternTableHalf << 12) | (tileNum << 4) | y | (1 << 3);
+			var plane0Index = (patternTableHalf << 12) | (tileIndex << 4) | y;
+			var plane1Index = (patternTableHalf << 12) | (tileIndex << 4) | y | (1 << 3);
 
 			var plane0 = _nes.PpuMemoryBus.ReadByte((ushort)plane0Index, true);
 			var plane1 = _nes.PpuMemoryBus.ReadByte((ushort)plane1Index, true);
@@ -128,7 +129,15 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 		switch (sdlEvent.Type)
 		{
 			case SdlEventType.WindowCloseRequested:
-				return SdlAppResult.Success;
+				{
+					if (sdlEvent.Window.WindowID == _patternTableWindowId)
+					{
+						_patternTableWindow.Hide();
+						_windowCount--;
+					}
+
+					return _windowCount == 0 ? SdlAppResult.Success : SdlAppResult.Continue;
+				}
 		}
 		return SdlAppResult.Continue;
 	}
@@ -137,8 +146,7 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 	{
 		_nes.Stop();
 
-		_patternTable0Tex.Destroy();
-		_patternTable1Tex.Destroy();
+		_patternTableTex.Destroy();
 		_patternTableRenderer.Destroy();
 		_patternTableWindow.Destroy();
 	}

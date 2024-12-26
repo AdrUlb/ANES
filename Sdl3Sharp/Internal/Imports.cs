@@ -103,4 +103,12 @@ internal static partial class Imports
 
 	[LibraryImport(_libraryName)]
 	internal static partial SdlWindowId SDL_GetWindowID(nint window);
+
+	[LibraryImport(_libraryName)]
+	[return: MarshalAs(UnmanagedType.U1)]
+	internal static partial bool SDL_ShowWindow(nint window);
+
+	[LibraryImport(_libraryName)]
+	[return: MarshalAs(UnmanagedType.U1)]
+	internal static partial bool SDL_HideWindow(nint window);
 }

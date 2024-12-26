@@ -26,4 +26,16 @@ public sealed class SdlWindow
 
 	public void Destroy() => SDL_DestroyWindow(Handle);
 	public SdlWindowId GetId() => SDL_GetWindowID(Handle);
+
+	public void Show()
+	{
+		if (!SDL_ShowWindow(Handle))
+			throw new SdlErrorException();
+	}
+
+	public void Hide()
+	{
+		if (!SDL_ShowWindow(Handle))
+			throw new SdlErrorException();
+	}
 }
