@@ -29,6 +29,7 @@ internal sealed class PpuMemoryBus(Nes nes) : IMemoryBus
 			address -= 0x3F00;
 			address %= 0x20;
 			nes.PaletteRam[address] = value;
+			Console.WriteLine($"PaletteRam[{address:X4}] = {value:X2}");
 		}
 
 		nes.Cartridge.PpuWriteByte(address, value);

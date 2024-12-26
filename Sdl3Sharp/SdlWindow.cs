@@ -16,7 +16,6 @@ public sealed class SdlWindow
 
 	public static SdlWindow Create(string title, int width, int height, SdlWindowFlags flags = 0) => new(SDL_CreateWindow(title, width, height, flags));
 
-
 	public static (SdlWindow window, SdlRenderer renderer) CreateWithRenderer(string title, int width, int height, SdlWindowFlags flags = 0)
 	{
 		if (!SDL_CreateWindowAndRenderer(title, width, height, flags, out var window, out var renderer))
@@ -26,4 +25,5 @@ public sealed class SdlWindow
 	}
 
 	public void Destroy() => SDL_DestroyWindow(Handle);
+	public SdlWindowId GetId() => SDL_GetWindowID(Handle);
 }

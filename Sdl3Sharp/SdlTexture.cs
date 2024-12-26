@@ -52,7 +52,6 @@ public class SdlTexture
 
 	public void SetScaleMode(SdlScaleMode scaleMode)
 	{
-		Console.WriteLine(_handle + ": " + scaleMode);
 		if (!SDL_SetTextureScaleMode(_handle, scaleMode))
 			throw new SdlErrorException();
 	}

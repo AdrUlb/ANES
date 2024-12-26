@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using static Sdl3Sharp.Internal.Imports;
 
@@ -21,7 +22,21 @@ public class SdlSurface
 {
 	private readonly nint _handle;
 
-	internal SdlSurface(nint handle)
+	private unsafe SdlSurfaceData* Data
+	{
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		get => (SdlSurfaceData*)_handle;
+	}
+
+	public unsafe int Width => Data->W;
+
+	public unsafe int Height => Data->H;
+
+	public unsafe int Pitch => Data->Pitch;
+
+	public unsafe SdlPixelFormat Format => Data->Format;
+
+	internal unsafe SdlSurface(nint handle)
 	{
 		if (handle == 0)
 			throw new SdlErrorException();
@@ -29,7 +44,8 @@ public class SdlSurface
 		_handle = handle;
 	}
 
+	public unsafe Span<T> GetPixels<T>() where T : unmanaged => new(Data->Pixels, Pitch * Height / sizeof(T));
+
 	public static SdlSurface Create(int width, int height, SdlPixelFormat format) => new(SDL_CreateSurface(width, height, format));
 	public void Destroy() => SDL_DestroySurface(_handle);
-	public unsafe SdlSurfaceData* GetData() => (SdlSurfaceData*)_handle;
 }

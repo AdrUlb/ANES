@@ -78,6 +78,14 @@ internal static partial class Imports
 
 	[LibraryImport(_libraryName)]
 	[return: MarshalAs(UnmanagedType.U1)]
+	internal static partial bool SDL_SetRenderScale(nint renderer, float scaleX, float scaleY);
+
+	[LibraryImport(_libraryName, StringMarshalling = StringMarshalling.Utf8)]
+	[return: MarshalAs(UnmanagedType.U1)]
+	internal static partial bool SDL_RenderDebugText(nint renderer, float x, float y, string str);
+
+	[LibraryImport(_libraryName)]
+	[return: MarshalAs(UnmanagedType.U1)]
 	internal static unsafe partial bool SDL_LockTextureToSurface(nint texture, SdlRect* rect, out nint surface);
 
 	[LibraryImport(_libraryName)]
@@ -92,4 +100,7 @@ internal static partial class Imports
 
 	[LibraryImport(_libraryName)]
 	internal static partial void SDL_DestroySurface(nint surface);
+
+	[LibraryImport(_libraryName)]
+	internal static partial SdlWindowId SDL_GetWindowID(nint window);
 }

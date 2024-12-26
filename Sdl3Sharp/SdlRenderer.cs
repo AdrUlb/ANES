@@ -11,7 +11,7 @@ public sealed class SdlRenderer
 	{
 		if (handle == 0)
 			throw new SdlErrorException();
-		
+
 		Handle = handle;
 	}
 
@@ -21,6 +21,15 @@ public sealed class SdlRenderer
 	public void Destroy() => SDL_DestroyRenderer(Handle);
 
 	public void SetDrawColor(Color color) => SDL_SetRenderDrawColor(Handle, color.R, color.G, color.B, color.A);
+
+	public void SetScale(float scaleX, float scaleY)
+	{
+		if (!SDL_SetRenderScale(Handle, scaleX, scaleY))
+			throw new SdlErrorException();
+	}
+
+	public void RenderDebugText(float x, float y, string str) => SDL_RenderDebugText(Handle, x, y, str);
+
 	public void Clear() => SDL_RenderClear(Handle);
 	public void Present() => SDL_RenderPresent(Handle);
 }

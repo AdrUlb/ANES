@@ -1,18 +1,30 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<!-- Detect when publishing -->
-		<IsPublishing>false</IsPublishing>
-		<IsPublishing Condition="'$(_IsPublishing)'!=''">true</IsPublishing>
-
+		
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		<PublishAot>true</PublishAot>
-		<InvariantGlobalization>true</InvariantGlobalization>
-		<DefineConstants Condition="'$(IsPublishing)'!='true'">MY_SET_DLLIMPORTRESOLVER;$(DefineConstants)</DefineConstants>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<InvariantGlobalization>true</InvariantGlobalization>
+		
+	</PropertyGroup>
+	
+	<PropertyGroup>
+		<!-- Detect when publishing -->
+		<IsPublishing>false</IsPublishing>
+		<IsPublishing Condition="'$(_IsPublishing)'!=''">true</IsPublishing>
+		
+		<PublishAot>true</PublishAot>
+		<PublishTrimmed>true</PublishTrimmed>
+		<TrimMode>full</TrimMode>
+		<OptimizationPreference>Speed</OptimizationPreference>
+		<IlcInstructionSet>avx2,bmi2,fma,pclmul,popcnt,aes</IlcInstructionSet>
+		
+		<StripSymbols Condition="'$(Configuration)|$(IsPublishing)'=='Release|true'">true</StripSymbols>
+		<CopyOutputSymbolsToPublishDirectory Condition="'$(Configuration)|$(IsPublishing)'=='Release|true'">false</CopyOutputSymbolsToPublishDirectory>
+		<DefineConstants Condition="'$(IsPublishing)'!='true'">MY_SET_DLLIMPORTRESOLVER;$(DefineConstants)</DefineConstants>
 	</PropertyGroup>
 
 	<ItemGroup>

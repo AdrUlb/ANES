@@ -4,7 +4,10 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<IsAotCompatible>true</IsAotCompatible>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<DebugSymbols Condition="'$(Configuration)'=='Release'">false</DebugSymbols>
+		<DebugType Condition="'$(Configuration)'=='Release'">None</DebugType>
 	</PropertyGroup>
-	
+
 </Project>
