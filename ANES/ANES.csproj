@@ -4,9 +4,7 @@
 		<!-- Detect when publishing -->
 		<IsPublishing>false</IsPublishing>
 		<IsPublishing Condition="'$(_IsPublishing)'!=''">true</IsPublishing>
-	</PropertyGroup>
-
-	<PropertyGroup>
+		
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -14,6 +12,7 @@
 		<PublishAot>true</PublishAot>
 		<InvariantGlobalization>true</InvariantGlobalization>
 		<DefineConstants Condition="'$(IsPublishing)'!='true'">MY_SET_DLLIMPORTRESOLVER;$(DefineConstants)</DefineConstants>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -27,13 +26,13 @@
 	<ItemGroup>
 		<!-- Generate direct PInvoke calls for everything in __Internal -->
 		<!-- This option replicates Mono AOT behavior that generates direct PInvoke calls for __Internal -->
-		<DirectPInvoke Include="__Internal"  Visible="false"/>
-		
+		<DirectPInvoke Include="__Internal" Visible="false"/>
+
 		<!-- Generate direct PInvoke calls for everything in libc (also matches libc.so on Linux or libc.dylib on macOS) -->
-		<DirectPInvoke Include="libc"  Visible="false"/>
+		<DirectPInvoke Include="libc" Visible="false"/>
 		<!--  Link SDL3 statically -->
-		<DirectPInvoke Include="SDL3"  Visible="false"/>
-		<NativeLibrary Include="..\NativeLibs\linux-x64\libSDL3.a" Condition="'$(RuntimeIdentifier)'=='linux-x64'"  Visible="false"/>
+		<DirectPInvoke Include="SDL3" Visible="false"/>
+		<NativeLibrary Include="..\NativeLibs\linux-x64\libSDL3.a" Condition="'$(RuntimeIdentifier)'=='linux-x64'" Visible="false"/>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -45,6 +44,9 @@
 		</None>
 		<None Update="Tests\nestest\nestest.log">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="Palette.bin">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
 

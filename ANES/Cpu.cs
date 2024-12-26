@@ -449,6 +449,9 @@ internal sealed class Cpu(IComputer computer)
 		_pendingReset = true;
 	}
 
+	public void RaiseNmi() => _pendingNmi = true;
+	public void RaiseIrq() => _pendingIrq = true;
+
 	public void Tick()
 	{
 		_opCycle++;
@@ -457,7 +460,7 @@ internal sealed class Cpu(IComputer computer)
 		{
 			//if (_traceCycles >= 42110000)
 			//if (_traceCycles % 10000000 == 0)
-			Console.WriteLine(GenerateTraceLine());
+			//Console.WriteLine(GenerateTraceLine());
 			//	Console.ReadKey(true);
 
 			FetchNextOperation();

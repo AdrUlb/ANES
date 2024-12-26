@@ -11,6 +11,8 @@ internal sealed class Nes : IComputer
 
 	public IMemoryBus CpuMemoryBus { get; }
 
+	public IMemoryBus PpuMemoryBus { get; }
+
 	internal readonly Cartridge Cartridge;
 	private readonly Cpu _cpu;
 
@@ -18,6 +20,7 @@ internal sealed class Nes : IComputer
 	{
 		_thread = new(ThreadProc);
 		CpuMemoryBus = new CpuMemoryBus(this);
+		PpuMemoryBus = new PpuMemoryBus(this);
 		Cartridge = new(this, "Tests/nestest/nestest.nes");
 		_cpu = new(this);
 		_cpu.Reset();

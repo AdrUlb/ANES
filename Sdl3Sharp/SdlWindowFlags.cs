@@ -1,5 +1,6 @@
 namespace Sdl3Sharp;
 
+[Flags]
 public enum SdlWindowFlags : uint
 {
 	Fullscreen = 0x0000000000000001, // window is in fullscreen mode
