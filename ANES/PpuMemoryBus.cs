@@ -4,20 +4,33 @@ internal sealed class PpuMemoryBus(Nes nes) : IMemoryBus
 {
 	public byte ReadByte(ushort address, bool suppressSideEffects = false)
 	{
-		var value = nes.Cartridge.PpuReadByte(address, suppressSideEffects);
+		// The PPU addresses a 14-bit (16kB) address space, $0000-$3FFF, completely separate from the CPU's address bus.
+		address %= 0x4000;
 
-		value &= address switch
+		// $3F00-3FFF is not configurable, always mapped to the internal palette control.
+		if (address >= 0x3F00)
 		{
-			_ => 0xFF
-		};
+			address -= 0x3F00;
+			address %= 0x20;
+			return nes.PaletteRam[address];
+		}
 
-		return value;
+		return nes.Cartridge.PpuReadByte(address, suppressSideEffects);
 	}
 
 	public void WriteByte(ushort address, byte value)
 	{
-		nes.Cartridge.PpuWriteByte(address, value);
+		// The PPU addresses a 14-bit (16kB) address space, $0000-$3FFF, completely separate from the CPU's address bus.
+		address %= 0x4000;
 
-		switch (address) { }
+		// $3F00-3FFF is not configurable, always mapped to the internal palette control.
+		if (address >= 0x3F00)
+		{
+			address -= 0x3F00;
+			address %= 0x20;
+			nes.PaletteRam[address] = value;
+		}
+
+		nes.Cartridge.PpuWriteByte(address, value);
 	}
 }

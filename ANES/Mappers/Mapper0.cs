@@ -67,14 +67,27 @@ internal sealed class Mapper0 : IMapper
 
 		return address switch
 		{
-			>= 0x0000 and <= 0x1FFF => _chrRom[address],
-			>= 0x2000 and <= 0x33FF => _nes.Vram[address - 0x2000 + _nt1Offset],
-			>= 0x2400 and <= 0x37FF => _nes.Vram[address - 0x2400 + _nt2Offset],
-			>= 0x2800 and <= 0x3BFF => _nes.Vram[address - 0x2800 + _nt3Offset],
-			>= 0x2C00 and <= 0x3FFF => _nes.Vram[address - 0x2C00 + _nt4Offset],
+			< 0x2000 => _chrRom[address],
+			< 0x2400 => _nes.Vram[address - 0x2000 + _nt1Offset],
+			< 0x2800 => _nes.Vram[address - 0x2400 + _nt2Offset],
+			< 0x2C00 => _nes.Vram[address - 0x2800 + _nt3Offset],
+			< 0x3000 => _nes.Vram[address - 0x2C00 + _nt4Offset],
 			_ => 0xFF
 		};
 	}
 
-	public void PpuWriteByte(ushort address, byte value) { }
+	public void PpuWriteByte(ushort address, byte value)
+	{
+		if (address is >= 0x3000 and <= 0x3EFF)
+			address -= 0x1000;
+
+		switch (address)
+		{
+			case < 0x2000: break;
+			case < 0x2400: _nes.Vram[address - 0x2000 + _nt1Offset] = value; break;
+			case < 0x2800: _nes.Vram[address - 0x2400 + _nt2Offset] = value; break;
+			case < 0x2C00: _nes.Vram[address - 0x2800 + _nt3Offset] = value; break;
+			case < 0x3000: _nes.Vram[address - 0x2C00 + _nt4Offset] = value; break;
+		}
+	}
 }

@@ -499,124 +499,7 @@ internal sealed class Cpu(IComputer computer)
 		_traceCycles++;
 	}
 
-	private void ExecAddressingAbsolute()
-	{
-		switch (_op.Instruction)
-		{
-			case CpuInstruction.Jmp: SpecialJmp(); break;
-			case CpuInstruction.Jsr: SpecialJsr(); break;
-			default:
-				switch (_op.Type)
-				{
-					case CpuOperationType.Read:
-						switch (_opCycle)
-						{
-							case 1: // fetch opcode, increment PC
-								break;
-							case 2: // fetch low byte of address, increment PC
-								_internalAddress = FetchOperationByte();
-								break;
-							case 3: // fetch high byte of address, increment PC
-								_internalAddress |= (ushort)(FetchOperationByte() << 8);
-								break;
-							case 4: // read from effective address
-								_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
-								ExecInst();
-								_op = CpuOperation.None;
-								break;
-						}
-						break;
-					case CpuOperationType.ReadModifyWrite:
-						switch (_opCycle)
-						{
-							case 1: // fetch opcode, increment PC
-								break;
-							case 2: // fetch low byte of address, increment PC
-								_internalAddress = FetchOperationByte();
-								break;
-							case 3: // fetch high byte of address, increment PC
-								_internalAddress |= (ushort)(FetchOperationByte() << 8);
-								break;
-							case 4: // read from effective address
-								_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
-								break;
-							case 5: // write the value back to effective address, and do the operation on it
-								computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
-								ExecInst();
-								break;
-							case 6: // write the new value to effective address
-								computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
-								_op = CpuOperation.None;
-								break;
-						}
-						break;
-					case CpuOperationType.Write:
-						switch (_opCycle)
-						{
-							case 1: // fetch opcode, increment PC
-								break;
-							case 2: // fetch low byte of address, increment PC
-								_internalAddress = FetchOperationByte();
-								break;
-							case 3: // fetch high byte of address, increment PC
-								_internalAddress |= (ushort)(FetchOperationByte() << 8);
-								break;
-							case 4: // write register to effective address
-								ExecInst();
-								computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
-								_op = CpuOperation.None;
-								break;
-						}
-						break;
-				}
-				break;
-		}
-		return;
-
-		void SpecialJmp()
-		{
-			switch (_opCycle)
-			{
-				case 1: // fetch opcode, increment PC
-					break;
-				case 2: // fetch low address byte, increment PC
-					_internalAddress = FetchOperationByte();
-					break;
-				case 3: // copy low address byte to PCL, fetch high address byte to PCH
-					_internalAddress |= (ushort)(FetchOperationByte() << 8);
-					RegPc = _internalAddress;
-					_op = CpuOperation.None;
-					break;
-			}
-		}
-
-		void SpecialJsr()
-		{
-			switch (_opCycle)
-			{
-				case 1: // fetch opcode, increment PC
-					break;
-				case 2: // fetch low address byte, increment PC
-					_internalAddress = FetchOperationByte();
-					break;
-				case 3: // internal operation (predecrement S?)
-					break;
-				case 4: // push PCH on stack, decrement S
-					computer.CpuMemoryBus.WriteByte(RegSp, (byte)(RegPc >> 8));
-					_regSpLow--;
-					break;
-				case 5: // push PCL on stack, decrement S
-					computer.CpuMemoryBus.WriteByte(RegSp, (byte)(RegPc & 0xFF));
-					_regSpLow--;
-					break;
-				case 6: // copy low address byte to PCL, fetch high address byte to PCH
-					_internalAddress |= (ushort)(FetchOperationByte() << 8);
-					RegPc = _internalAddress;
-					_op = CpuOperation.None;
-					break;
-			}
-		}
-	}
+	#region Accumulator or implied addressing
 
 	private void ExecAddressingAccumulatorOrImplied()
 	{
@@ -847,6 +730,229 @@ internal sealed class Cpu(IComputer computer)
 			}
 		}
 	}
+
+	#endregion
+
+	#region Absolute addressing
+
+	private void ExecAddressingAbsolute()
+	{
+		switch (_op.Instruction)
+		{
+			case CpuInstruction.Jmp: SpecialJmp(); break;
+			case CpuInstruction.Jsr: SpecialJsr(); break;
+			default:
+				switch (_op.Type)
+				{
+					case CpuOperationType.Read:
+						switch (_opCycle)
+						{
+							case 1: // fetch opcode, increment PC
+								break;
+							case 2: // fetch low byte of address, increment PC
+								_internalAddress = FetchOperationByte();
+								break;
+							case 3: // fetch high byte of address, increment PC
+								_internalAddress |= (ushort)(FetchOperationByte() << 8);
+								break;
+							case 4: // read from effective address
+								_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
+								ExecInst();
+								_op = CpuOperation.None;
+								break;
+						}
+						break;
+					case CpuOperationType.ReadModifyWrite:
+						switch (_opCycle)
+						{
+							case 1: // fetch opcode, increment PC
+								break;
+							case 2: // fetch low byte of address, increment PC
+								_internalAddress = FetchOperationByte();
+								break;
+							case 3: // fetch high byte of address, increment PC
+								_internalAddress |= (ushort)(FetchOperationByte() << 8);
+								break;
+							case 4: // read from effective address
+								_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
+								break;
+							case 5: // write the value back to effective address, and do the operation on it
+								computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+								ExecInst();
+								break;
+							case 6: // write the new value to effective address
+								computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+								_op = CpuOperation.None;
+								break;
+						}
+						break;
+					case CpuOperationType.Write:
+						switch (_opCycle)
+						{
+							case 1: // fetch opcode, increment PC
+								break;
+							case 2: // fetch low byte of address, increment PC
+								_internalAddress = FetchOperationByte();
+								break;
+							case 3: // fetch high byte of address, increment PC
+								_internalAddress |= (ushort)(FetchOperationByte() << 8);
+								break;
+							case 4: // write register to effective address
+								ExecInst();
+								computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+								_op = CpuOperation.None;
+								break;
+						}
+						break;
+				}
+				break;
+		}
+		return;
+
+		void SpecialJmp()
+		{
+			switch (_opCycle)
+			{
+				case 1: // fetch opcode, increment PC
+					break;
+				case 2: // fetch low address byte, increment PC
+					_internalAddress = FetchOperationByte();
+					break;
+				case 3: // copy low address byte to PCL, fetch high address byte to PCH
+					_internalAddress |= (ushort)(FetchOperationByte() << 8);
+					RegPc = _internalAddress;
+					_op = CpuOperation.None;
+					break;
+			}
+		}
+
+		void SpecialJsr()
+		{
+			switch (_opCycle)
+			{
+				case 1: // fetch opcode, increment PC
+					break;
+				case 2: // fetch low address byte, increment PC
+					_internalAddress = FetchOperationByte();
+					break;
+				case 3: // internal operation (predecrement S?)
+					break;
+				case 4: // push PCH on stack, decrement S
+					computer.CpuMemoryBus.WriteByte(RegSp, (byte)(RegPc >> 8));
+					_regSpLow--;
+					break;
+				case 5: // push PCL on stack, decrement S
+					computer.CpuMemoryBus.WriteByte(RegSp, (byte)(RegPc & 0xFF));
+					_regSpLow--;
+					break;
+				case 6: // copy low address byte to PCL, fetch high address byte to PCH
+					_internalAddress |= (ushort)(FetchOperationByte() << 8);
+					RegPc = _internalAddress;
+					_op = CpuOperation.None;
+					break;
+			}
+		}
+	}
+
+	private void ExecAddressingAbsoluteIndexed(byte regIndex)
+	{
+		switch (_op.Type)
+		{
+			case CpuOperationType.Read:
+				switch (_opCycle)
+				{
+					case 1: // fetch opcode, increment PC
+						break;
+					case 2: // fetch low byte of address, increment PC
+						_internalAddress = FetchOperationByte();
+						break;
+					case 3: // fetch high byte of address, add index register to low address byte, increment PC
+						_internalAddress += regIndex;
+						if (_internalAddress <= 0xFF)
+							_opCycle++;
+						_internalAddress &= 0x00FF;
+
+						_internalAddress |= (ushort)(FetchOperationByte() << 8);
+						break;
+					case 4: // read from effective address, fix the high byte of effective address
+						computer.CpuMemoryBus.ReadByte(_internalAddress);
+						_internalAddress += 0x0100;
+						break;
+					case 5: // re-read from effective address
+						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
+						ExecInst();
+						_op = CpuOperation.None;
+						break;
+				}
+				break;
+			case CpuOperationType.ReadModifyWrite:
+				switch (_opCycle)
+				{
+					case 1: // fetch opcode, increment PC
+						break;
+					case 2: // fetch low byte of address, increment PC
+						_internalAddress = FetchOperationByte();
+						break;
+					case 3: // fetch high byte of address, add index register to low address byte, increment PC
+						_internalAddress += regIndex;
+						var mustAdjust = _internalAddress > 0xFF;
+						_internalAddress &= 0x00FF;
+
+						_internalAddress |= (ushort)(FetchOperationByte() << 8);
+						_internalOperand = (byte)(mustAdjust ? 1 : 0);
+						break;
+					case 4: // read from effective address, fix the high byte of effective address
+						computer.CpuMemoryBus.ReadByte(_internalAddress);
+						if (_internalOperand != 0)
+							_internalAddress += 0x100;
+						break;
+					case 5: // re-read from effective address
+						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
+						break;
+					case 6: // write the value back to effective address, and do the operation on it
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						ExecInst();
+						break;
+					case 7: // write the new value to effective address
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						_op = CpuOperation.None;
+						break;
+				}
+				break;
+			case CpuOperationType.Write:
+				switch (_opCycle)
+				{
+					case 1: // fetch opcode, increment PC
+						break;
+					case 2: // fetch low byte of address, increment PC
+						_internalAddress = FetchOperationByte();
+						break;
+					case 3: // fetch high byte of address, add index register to low address byte, increment PC
+						_internalAddress += regIndex;
+						var mustAdjust = _internalAddress > 0xFF;
+						_internalAddress &= 0x00FF;
+
+						_internalAddress |= (ushort)(FetchOperationByte() << 8);
+						_internalOperand = (byte)(mustAdjust ? 1 : 0);
+						break;
+					case 4: // read from effective address, fix the high byte of effective address
+						computer.CpuMemoryBus.ReadByte(_internalAddress);
+						if (_internalOperand != 0)
+							_internalAddress += 0x100;
+						break;
+					case 5: // write to effective address
+						ExecInst();
+						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						_op = CpuOperation.None;
+						break;
+				}
+				break;
+		}
+	}
+
+	#endregion
+
+	#region Indirect addressing
 
 	private void ExecAddressingIndirect()
 	{
@@ -1082,6 +1188,10 @@ internal sealed class Cpu(IComputer computer)
 		}
 	}
 
+	#endregion
+
+	#region Relative addressing
+
 	private void ExecAddressingRelative()
 	{
 		switch (_opCycle)
@@ -1138,6 +1248,28 @@ internal sealed class Cpu(IComputer computer)
 				break;
 		}
 	}
+
+	#endregion
+
+	#region Immediate addressing
+
+	private void ExecAddressingImmediate()
+	{
+		switch (_opCycle)
+		{
+			case 1: // fetch opcode, increment PC
+				break;
+			case 2: // fetch value, increment PC
+				_internalOperand = FetchOperationByte();
+				ExecInst();
+				_op = CpuOperation.None;
+				break;
+		}
+	}
+
+	#endregion
+
+	#region Zero-page addressing
 
 	private void ExecAddressingZeroPage()
 	{
@@ -1270,115 +1402,7 @@ internal sealed class Cpu(IComputer computer)
 		}
 	}
 
-	private void ExecAddressingAbsoluteIndexed(byte regIndex)
-	{
-		switch (_op.Type)
-		{
-			case CpuOperationType.Read:
-				switch (_opCycle)
-				{
-					case 1: // fetch opcode, increment PC
-						break;
-					case 2: // fetch low byte of address, increment PC
-						_internalAddress = FetchOperationByte();
-						break;
-					case 3: // fetch high byte of address, add index register to low address byte, increment PC
-						_internalAddress += regIndex;
-						if (_internalAddress <= 0xFF)
-							_opCycle++;
-						_internalAddress &= 0x00FF;
-
-						_internalAddress |= (ushort)(FetchOperationByte() << 8);
-						break;
-					case 4: // read from effective address, fix the high byte of effective address
-						computer.CpuMemoryBus.ReadByte(_internalAddress);
-						_internalAddress += 0x0100;
-						break;
-					case 5: // re-read from effective address
-						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
-						ExecInst();
-						_op = CpuOperation.None;
-						break;
-				}
-				break;
-			case CpuOperationType.ReadModifyWrite:
-				switch (_opCycle)
-				{
-					case 1: // fetch opcode, increment PC
-						break;
-					case 2: // fetch low byte of address, increment PC
-						_internalAddress = FetchOperationByte();
-						break;
-					case 3: // fetch high byte of address, add index register to low address byte, increment PC
-						_internalAddress += regIndex;
-						var mustAdjust = _internalAddress > 0xFF;
-						_internalAddress &= 0x00FF;
-
-						_internalAddress |= (ushort)(FetchOperationByte() << 8);
-						_internalOperand = (byte)(mustAdjust ? 1 : 0);
-						break;
-					case 4: // read from effective address, fix the high byte of effective address
-						computer.CpuMemoryBus.ReadByte(_internalAddress);
-						if (_internalOperand != 0)
-							_internalAddress += 0x100;
-						break;
-					case 5: // re-read from effective address
-						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
-						break;
-					case 6: // write the value back to effective address, and do the operation on it
-						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
-						ExecInst();
-						break;
-					case 7: // write the new value to effective address
-						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
-						_op = CpuOperation.None;
-						break;
-				}
-				break;
-			case CpuOperationType.Write:
-				switch (_opCycle)
-				{
-					case 1: // fetch opcode, increment PC
-						break;
-					case 2: // fetch low byte of address, increment PC
-						_internalAddress = FetchOperationByte();
-						break;
-					case 3: // fetch high byte of address, add index register to low address byte, increment PC
-						_internalAddress += regIndex;
-						var mustAdjust = _internalAddress > 0xFF;
-						_internalAddress &= 0x00FF;
-
-						_internalAddress |= (ushort)(FetchOperationByte() << 8);
-						_internalOperand = (byte)(mustAdjust ? 1 : 0);
-						break;
-					case 4: // read from effective address, fix the high byte of effective address
-						computer.CpuMemoryBus.ReadByte(_internalAddress);
-						if (_internalOperand != 0)
-							_internalAddress += 0x100;
-						break;
-					case 5: // write to effective address
-						ExecInst();
-						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
-						_op = CpuOperation.None;
-						break;
-				}
-				break;
-		}
-	}
-
-	private void ExecAddressingImmediate()
-	{
-		switch (_opCycle)
-		{
-			case 1: // fetch opcode, increment PC
-				break;
-			case 2: // fetch value, increment PC
-				_internalOperand = FetchOperationByte();
-				ExecInst();
-				_op = CpuOperation.None;
-				break;
-		}
-	}
+	#endregion
 
 	private void ExecInst()
 	{

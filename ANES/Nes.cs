@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace ANES;
 
 internal sealed class Nes : IComputer
@@ -8,12 +10,14 @@ internal sealed class Nes : IComputer
 
 	internal readonly byte[] Ram = new byte[0x800];
 	internal readonly byte[] Vram = new byte[0x800];
+	internal readonly byte[] PaletteRam = new byte[0x20];
 
 	public IMemoryBus CpuMemoryBus { get; }
 
 	public IMemoryBus PpuMemoryBus { get; }
 
 	internal readonly Cartridge Cartridge;
+	internal readonly Ppu Ppu;
 	private readonly Cpu _cpu;
 
 	public Nes()
@@ -22,17 +26,35 @@ internal sealed class Nes : IComputer
 		CpuMemoryBus = new CpuMemoryBus(this);
 		PpuMemoryBus = new PpuMemoryBus(this);
 		Cartridge = new(this, "Tests/nestest/nestest.nes");
+		//Cartridge = new(this, "/mnt/ssd_1tb/Roms/NES/donkeykong.nes");
+		Ppu = new(this);
 		_cpu = new(this);
 		_cpu.Reset();
 	}
 
 	private void ThreadProc()
 	{
+		ulong tick = 0;
+		var start = Stopwatch.StartNew();
+
 		while (_keepRunning)
 		{
-			_cpu.Tick();
-			// NOTE: signal IRQs AFTER CPU tick
-			// maybe NMIs before?
+			if (tick % 4 == 0)
+			{
+				Ppu.Tick();
+
+				if (Ppu.HandleNmi())
+					_cpu.RaiseNmi();
+			}
+
+			if (tick % 12 == 0)
+			{
+				_cpu.Tick();
+				// NOTE: signal IRQs AFTER CPU tick
+				// maybe NMIs before?
+			}
+
+			tick++;
 		}
 	}
 

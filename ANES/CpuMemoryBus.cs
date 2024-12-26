@@ -12,6 +12,7 @@ internal sealed class CpuMemoryBus(Nes nes) : IMemoryBus
 			< 0x1000 => nes.Ram[address - 0x0800],
 			< 0x1800 => nes.Ram[address - 0x1000],
 			< 0x2000 => nes.Ram[address - 0x1800],
+			< 0x4000 => nes.Ppu.ReadReg((address - 0x2000) % 8, suppressSideEffects),
 			_ => 0xFF
 		};
 
@@ -28,6 +29,8 @@ internal sealed class CpuMemoryBus(Nes nes) : IMemoryBus
 			case < 0x1000: nes.Ram[address - 0x0800] = value; break;
 			case < 0x1800: nes.Ram[address - 0x1000] = value; break;
 			case < 0x2000: nes.Ram[address - 0x1800] = value; break;
+			case < 0x4000: nes.Ppu.WriteReg((address - 0x2000) % 8, value); break;
+			//case 0x4014: Console.WriteLine("TODO: CPU ADDRESS BUS 0x4014: OAMDMA"); break;
 		}
 	}
 }

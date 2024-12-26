@@ -4,7 +4,7 @@
 		<!-- Detect when publishing -->
 		<IsPublishing>false</IsPublishing>
 		<IsPublishing Condition="'$(_IsPublishing)'!=''">true</IsPublishing>
-		
+
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -45,8 +45,8 @@
 		<None Update="Tests\nestest\nestest.log">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="Palette.bin">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		<None Update="Palette.pal">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
 
