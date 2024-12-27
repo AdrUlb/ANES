@@ -16,6 +16,7 @@ internal sealed class Nes : IComputer
 
 	public IMemoryBus PpuMemoryBus { get; }
 
+	internal readonly Controller Controller = new();
 	internal readonly Cartridge Cartridge;
 	internal readonly Ppu Ppu;
 	private readonly Cpu _cpu;
