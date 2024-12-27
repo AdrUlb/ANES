@@ -4,42 +4,29 @@ using System.Drawing;
 
 namespace ANES;
 
-internal readonly struct DebugDisplay
+internal readonly struct MainDisplay
 {
 	private const int _scale = 2;
 
-	private const int _patternTableWidth = 8 * 16;
-	private const int _patternTableHeight = 8 * 16;
-	private const int _patternTablePadding = 5;
-
 	private readonly Nes _nes;
 
-	public readonly SdlWindow Window;
+	private readonly SdlWindow _window;
 	private readonly SdlRenderer _renderer;
-	public readonly SdlWindowId WindowId;
 	private readonly SdlTexture _texture;
 
-	public DebugDisplay() => throw new InvalidOperationException();
+	public MainDisplay() => throw new InvalidOperationException();
 
-	public DebugDisplay(Nes nes)
+	public MainDisplay(Nes nes)
 	{
 		_nes = nes;
-		/*(Window, _renderer) = SdlWindow.CreateWithRenderer(
-			"ANES - Debug Display",
-			(_patternTableWidth * 2 + _patternTablePadding * 3) * _scale,
-			(_patternTableHeight + _patternTablePadding * 2) * _scale
-		);*/
-		(Window, _renderer) = SdlWindow.CreateWithRenderer(
-			"ANES - Debug Display",
+		(_window, _renderer) = SdlWindow.CreateWithRenderer(
+			"ANES: Adrian's NES Emulator",
 			256 * _scale,
 			240 * _scale
 		);
-		WindowId = Window.GetId();
 
 		var tilesTexProps = SdlProperties.Create();
 		tilesTexProps.Set(SdlProperties.TextureCreateAccess, (long)SdlTextureAccess.Streaming);
-		//tilesTexProps.Set(SdlProperties.TextureCreateWidth, _patternTableWidth);
-		//tilesTexProps.Set(SdlProperties.TextureCreateHeight, _patternTableHeight);
 		tilesTexProps.Set(SdlProperties.TextureCreateWidth, 256);
 		tilesTexProps.Set(SdlProperties.TextureCreateHeight, 240);
 		tilesTexProps.Set(SdlProperties.TextureCreateFormat, (long)SdlPixelFormat.Argb8888);
@@ -52,9 +39,6 @@ internal readonly struct DebugDisplay
 	{
 		_renderer.SetDrawColor(Color.White);
 		_renderer.Clear();
-
-		var patternTable0Target = new RectangleF(_patternTablePadding, _patternTablePadding, _patternTableWidth, _patternTableHeight);
-		var patternTable1Target = new RectangleF(_patternTablePadding * 2 + _patternTableWidth, _patternTablePadding, _patternTableWidth, _patternTableHeight);
 
 		var surface = _texture.LockToSurface();
 
@@ -81,7 +65,7 @@ internal readonly struct DebugDisplay
 	{
 		_texture.Destroy();
 		_renderer.Destroy();
-		Window.Destroy();
+		_window.Destroy();
 	}
 }
 
@@ -89,15 +73,13 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 {
 	private readonly Nes _nes = new();
 
-	private DebugDisplay _debugDisplay;
-
-	private readonly byte[] _palette = File.ReadAllBytes("Palette.pal");
+	private MainDisplay _mainDisplay;
 
 	private int _windowCount = 0;
 
 	protected override SdlAppResult Init()
 	{
-		_debugDisplay = new(_nes);
+		_mainDisplay = new(_nes);
 		_windowCount++;
 
 		_nes.Start();
@@ -107,7 +89,7 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 
 	protected override SdlAppResult Iterate()
 	{
-		_debugDisplay.Iterate();
+		_mainDisplay.Iterate();
 
 		return SdlAppResult.Continue;
 	}
@@ -117,15 +99,7 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 		switch (sdlEvent.Type)
 		{
 			case SdlEventType.WindowCloseRequested:
-				{
-					if (sdlEvent.Window.WindowID == _debugDisplay.WindowId)
-					{
-						_debugDisplay.Window.Hide();
-						_windowCount--;
-					}
-
-					return _windowCount == 0 ? SdlAppResult.Success : SdlAppResult.Continue;
-				}
+				return SdlAppResult.Success;
 		}
 		return SdlAppResult.Continue;
 	}
@@ -134,6 +108,6 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 	{
 		_nes.Stop();
 
-		_debugDisplay.Destroy();
+		_mainDisplay.Destroy();
 	}
 }

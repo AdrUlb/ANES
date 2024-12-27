@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Drawing;
 
 namespace ANES;
@@ -28,6 +29,7 @@ internal sealed class Ppu(Nes nes)
 	// TODO: implement these properly
 	private ushort _ppuAddress = 0;
 	private ushort _oamAddr = 0;
+	private readonly byte[] _palette = File.ReadAllBytes("Palette.pal");
 
 	internal Color[] Pixels = new Color[ScreenWidth * ScreenHeight];
 
@@ -42,18 +44,35 @@ internal sealed class Ppu(Nes nes)
 			{
 				for (var tileX = 0; tileX < 256 / 8; tileX++)
 				{
-					var addr = 0x2000 + tileX + tileY * (256 / 8);
+					var nametableBase = _ctrlBaseNametable switch
+					{
+						0 => 0x2000,
+						1 => 0x2400,
+						2 => 0x2800,
+						3 => 0x2C00,
+						_ => throw new UnreachableException()
+					};
+					var addr = nametableBase + tileX + tileY * (256 / 8);
 					var tileIndex = nes.PpuMemoryBus.ReadByte((ushort)addr, true);
+					var attributeAddress = 0x23C0 | (_ctrlBaseNametable << 10) | (tileY / 4 * 8 + tileX / 4);
+					var attributeByte = nes.PpuMemoryBus.ReadByte((ushort)attributeAddress);
+					var attribute = (tileX % 4 / 2, tileY % 4 / 2) switch
+					{
+						(0, 0) => attributeByte & 0b11,
+						(1, 0) => (attributeByte >> 2) & 0b11,
+						(0, 1) => (attributeByte >> 4) & 0b11,
+						(1, 1) => (attributeByte >> 6) & 0b11,
+						_ => throw new UnreachableException()
+					};
 
-					//CopyTile(tileX * 8, tileY * 8, 0, tileIndex);
+
 					var surfX = tileX * 8;
 					var surfY = tileY * 8;
 
 					for (var y = 0; y < 8; y++)
 					{
-						const int patternTableHalf = 0;
-						var plane0Index = (patternTableHalf << 12) | (tileIndex << 4) | y;
-						var plane1Index = (patternTableHalf << 12) | (tileIndex << 4) | y | (1 << 3);
+						var plane0Index = (_ctrlBackgroundPatternTable ? 1 << 12 : 0) | (tileIndex << 4) | y;
+						var plane1Index = (_ctrlBackgroundPatternTable ? 1 << 12 : 0) | (tileIndex << 4) | y | (1 << 3);
 
 						var plane0 = nes.PpuMemoryBus.ReadByte((ushort)plane0Index, true);
 						var plane1 = nes.PpuMemoryBus.ReadByte((ushort)plane1Index, true);
@@ -66,10 +85,24 @@ internal sealed class Ppu(Nes nes)
 
 							var color = Color.FromArgb(255 * colorIndex / 3, 255 * colorIndex / 3, 255 * colorIndex / 3);
 
+							//var r = _palette[attribute * 3 + 0];
+							//var g = _palette[attribute * 3 + 1];
+							//var b = _palette[attribute * 3 + 2];
+
 							var xx = x + surfX;
 							var yy = y + surfY;
 							var index = xx + yy * ScreenWidth;
-							Pixels[index] = color;
+
+							var paletteOffset = colorIndex switch
+							{
+								0 => nes.PpuMemoryBus.ReadByte(0x3F00),
+								1 => nes.PpuMemoryBus.ReadByte((ushort)(0x3F00 | (4 * attribute + 1))),
+								2 => nes.PpuMemoryBus.ReadByte((ushort)(0x3F00 | (4 * attribute + 2))),
+								3 => nes.PpuMemoryBus.ReadByte((ushort)(0x3F00 | (4 * attribute + 3))),
+								_ => throw new UnreachableException()
+							};
+
+							Pixels[index] = Color.FromArgb(_palette[paletteOffset * 3 + 0], _palette[paletteOffset * 3 + 1], _palette[paletteOffset * 3 + 2]);
 						}
 					}
 				}
@@ -77,7 +110,7 @@ internal sealed class Ppu(Nes nes)
 
 			if (_ctrlVblankNmiEnable)
 				_raiseNmi = true;
-			
+
 			_dot = 0;
 		}
 	}
