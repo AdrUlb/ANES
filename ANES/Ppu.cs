@@ -6,7 +6,7 @@ namespace ANES;
 internal sealed class Ppu(Nes nes)
 {
 	internal const int ScreenWidth = 256;
-	internal const int ScreenHeight = 240;
+	internal const int ScreenHeight = 224;
 
 	// TODO: set flag correctly
 	private bool _statusVblank = true;
@@ -49,11 +49,11 @@ internal sealed class Ppu(Nes nes)
 				_ => throw new UnreachableException()
 			};
 
-			for (var tileY = 0; tileY < 240 / 8; tileY++)
+			for (var tileY = 0; tileY < ScreenHeight / 8; tileY++)
 			{
-				for (var tileX = 0; tileX < 256 / 8; tileX++)
+				for (var tileX = 0; tileX < ScreenWidth / 8; tileX++)
 				{
-					var nametablePatternAddress = nametableBase + tileX + tileY * (256 / 8);
+					var nametablePatternAddress = nametableBase + tileX + tileY * (ScreenWidth / 8);
 					var attributeAddress = 0x23C0 | (_ctrlBaseNametable << 10) | (tileY / 4 * 8 + tileX / 4);
 					var nametablePattern = nes.PpuMemoryBus.ReadByte((ushort)nametablePatternAddress, true);
 
