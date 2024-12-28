@@ -40,54 +40,47 @@ internal sealed class Ppu(Nes nes)
 		// TODO: Implement this properly, this is obviously a BAD hack
 		if (_dot == 340 * 260)
 		{
+			var nametableBase = _ctrlBaseNametable switch
+			{
+				0 => 0x2000,
+				1 => 0x2400,
+				2 => 0x2800,
+				3 => 0x2C00,
+				_ => throw new UnreachableException()
+			};
+
 			for (var tileY = 0; tileY < 240 / 8; tileY++)
 			{
 				for (var tileX = 0; tileX < 256 / 8; tileX++)
 				{
-					var nametableBase = _ctrlBaseNametable switch
-					{
-						0 => 0x2000,
-						1 => 0x2400,
-						2 => 0x2800,
-						3 => 0x2C00,
-						_ => throw new UnreachableException()
-					};
-					var addr = nametableBase + tileX + tileY * (256 / 8);
-					var tileIndex = nes.PpuMemoryBus.ReadByte((ushort)addr, true);
+					var nametablePatternAddress = nametableBase + tileX + tileY * (256 / 8);
 					var attributeAddress = 0x23C0 | (_ctrlBaseNametable << 10) | (tileY / 4 * 8 + tileX / 4);
-					var attributeByte = nes.PpuMemoryBus.ReadByte((ushort)attributeAddress);
-					var attribute = (tileX % 4 / 2, tileY % 4 / 2) switch
-					{
-						(0, 0) => attributeByte & 0b11,
-						(1, 0) => (attributeByte >> 2) & 0b11,
-						(0, 1) => (attributeByte >> 4) & 0b11,
-						(1, 1) => (attributeByte >> 6) & 0b11,
-						_ => throw new UnreachableException()
-					};
+					var nametablePattern = nes.PpuMemoryBus.ReadByte((ushort)nametablePatternAddress, true);
 
+					var attribute = nes.PpuMemoryBus.ReadByte((ushort)attributeAddress);
+					if (tileX % 4 != 0)
+						attribute >>= 2;
+					if (tileY % 4 != 0)
+						attribute >>= 4;
+					attribute &= 0b11;
 
 					var surfX = tileX * 8;
 					var surfY = tileY * 8;
 
 					for (var y = 0; y < 8; y++)
 					{
-						var plane0Index = (_ctrlBackgroundPatternTable ? 1 << 12 : 0) | (tileIndex << 4) | y;
-						var plane1Index = (_ctrlBackgroundPatternTable ? 1 << 12 : 0) | (tileIndex << 4) | y | (1 << 3);
+						var patternPlane0Index = (_ctrlBackgroundPatternTable ? 1 << 12 : 0) | (nametablePattern << 4) | y;
+						var patternPlane1Index = patternPlane0Index | (1 << 3);
 
-						var plane0 = nes.PpuMemoryBus.ReadByte((ushort)plane0Index, true);
-						var plane1 = nes.PpuMemoryBus.ReadByte((ushort)plane1Index, true);
+						var patternPlane0 = nes.PpuMemoryBus.ReadByte((ushort)patternPlane0Index, true);
+						var patternPlane1 = nes.PpuMemoryBus.ReadByte((ushort)patternPlane1Index, true);
 
 						for (var x = 0; x < 8; x++)
 						{
-							var bit0 = (plane0 >> (8 - 1 - x)) & 1;
-							var bit1 = (plane1 >> (8 - 1 - x)) & 1;
-							var colorIndex = (bit0 << 1) | bit1;
+							var patternBit0 = (patternPlane0 >> (8 - 1 - x)) & 1;
+							var patternBit1 = (patternPlane1 >> (8 - 1 - x)) & 1;
 
-							var color = Color.FromArgb(255 * colorIndex / 3, 255 * colorIndex / 3, 255 * colorIndex / 3);
-
-							//var r = _palette[attribute * 3 + 0];
-							//var g = _palette[attribute * 3 + 1];
-							//var b = _palette[attribute * 3 + 2];
+							var colorIndex = (patternBit1 << 1) | patternBit0;
 
 							var xx = x + surfX;
 							var yy = y + surfY;

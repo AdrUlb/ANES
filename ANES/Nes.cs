@@ -27,8 +27,7 @@ internal sealed class Nes : IComputer
 		CpuMemoryBus = new CpuMemoryBus(this);
 		PpuMemoryBus = new PpuMemoryBus(this);
 		Cartridge = new(this, "Tests/nestest/nestest.nes");
-		//Cartridge = new(this, "/mnt/ssd_1tb/Roms/NES/donkeykong.nes");
-		//Cartridge = new(this, "/mnt/ssd_1tb/Roms/NES/smb1.nes");
+		//Cartridge = new(this, "/home/adrian/roms/nes/burgertime.nes");
 		Ppu = new(this);
 		_cpu = new(this);
 		_cpu.Reset();
