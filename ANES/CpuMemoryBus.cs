@@ -13,8 +13,8 @@ internal sealed class CpuMemoryBus(Nes nes) : IMemoryBus
 			< 0x1800 => nes.Ram[address - 0x1000],
 			< 0x2000 => nes.Ram[address - 0x1800],
 			< 0x4000 => nes.Ppu.ReadReg((address - 0x2000) % 8, suppressSideEffects),
-			0x4016 => nes.Controller.ReadData1(),
-			0x4017 => nes.Controller.ReadData2(),
+			0x4016 => nes.Controllers.ReadData1(),
+			0x4017 => nes.Controllers.ReadData2(),
 			_ => 0xFF
 		};
 
@@ -32,7 +32,7 @@ internal sealed class CpuMemoryBus(Nes nes) : IMemoryBus
 			case < 0x1800: nes.Ram[address - 0x1000] = value; break;
 			case < 0x2000: nes.Ram[address - 0x1800] = value; break;
 			case < 0x4000: nes.Ppu.WriteReg((address - 0x2000) % 8, value); break;
-			case 0x4016: nes.Controller.WriteStrobe(value); break;
+			case 0x4016: nes.Controllers.WriteStrobe(value); break;
 		}
 	}
 }

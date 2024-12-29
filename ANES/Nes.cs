@@ -16,7 +16,7 @@ internal sealed class Nes : IComputer
 
 	public IMemoryBus PpuMemoryBus { get; }
 
-	internal readonly Controller Controller = new();
+	internal readonly Controllers Controllers = new();
 	internal readonly Cartridge Cartridge;
 	internal readonly Ppu Ppu;
 	private readonly Cpu _cpu;
@@ -27,7 +27,7 @@ internal sealed class Nes : IComputer
 		CpuMemoryBus = new CpuMemoryBus(this);
 		PpuMemoryBus = new PpuMemoryBus(this);
 		//Cartridge = new(this, "Tests/nestest/nestest.nes");
-		Cartridge = new(this, "/home/adrian/roms/nes/smb1.nes");
+		Cartridge = new(this, "/home/adrian/roms/nes/nestest.nes");
 		Ppu = new(this);
 		_cpu = new(this);
 		_cpu.Reset();

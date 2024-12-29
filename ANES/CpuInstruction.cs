@@ -61,12 +61,17 @@ internal enum CpuInstruction
 	Txs,
 	Tya,
 	
+	Alr,
+	Anc,
+	Arr,
 	Dcp,
 	Isc,
 	Lax,
+	Lxa,
 	Rla,
 	Rra,
 	Sax,
+	Sbx,
 	Slo,
 	Sre
 }

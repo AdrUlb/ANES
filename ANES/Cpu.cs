@@ -19,7 +19,7 @@ internal sealed class Cpu(IComputer computer)
 		new(CpuInstruction.Php, CpuAddressingMode.Implied),
 		new(CpuInstruction.Ora, CpuAddressingMode.Immediate),
 		new(CpuInstruction.Asl, CpuAddressingMode.Accumulator),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.Anc, CpuAddressingMode.Immediate, true),
 		new(CpuInstruction.Nop, CpuAddressingMode.Absolute, true),
 		new(CpuInstruction.Ora, CpuAddressingMode.Absolute),
 		new(CpuInstruction.Asl, CpuAddressingMode.Absolute),
@@ -53,7 +53,7 @@ internal sealed class Cpu(IComputer computer)
 		new(CpuInstruction.Plp, CpuAddressingMode.Implied),
 		new(CpuInstruction.And, CpuAddressingMode.Immediate),
 		new(CpuInstruction.Rol, CpuAddressingMode.Accumulator),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.Anc, CpuAddressingMode.Immediate, true),
 		new(CpuInstruction.Bit, CpuAddressingMode.Absolute),
 		new(CpuInstruction.And, CpuAddressingMode.Absolute),
 		new(CpuInstruction.Rol, CpuAddressingMode.Absolute),
@@ -87,7 +87,7 @@ internal sealed class Cpu(IComputer computer)
 		new(CpuInstruction.Pha, CpuAddressingMode.Implied),
 		new(CpuInstruction.Eor, CpuAddressingMode.Immediate),
 		new(CpuInstruction.Lsr, CpuAddressingMode.Accumulator),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.Alr, CpuAddressingMode.Immediate, true),
 		new(CpuInstruction.Jmp, CpuAddressingMode.Absolute),
 		new(CpuInstruction.Eor, CpuAddressingMode.Absolute),
 		new(CpuInstruction.Lsr, CpuAddressingMode.Absolute),
@@ -121,7 +121,7 @@ internal sealed class Cpu(IComputer computer)
 		new(CpuInstruction.Pla, CpuAddressingMode.Implied),
 		new(CpuInstruction.Adc, CpuAddressingMode.Immediate),
 		new(CpuInstruction.Ror, CpuAddressingMode.Accumulator),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.Arr, CpuAddressingMode.Immediate, true),
 		new(CpuInstruction.Jmp, CpuAddressingMode.Indirect),
 		new(CpuInstruction.Adc, CpuAddressingMode.Absolute),
 		new(CpuInstruction.Ror, CpuAddressingMode.Absolute),
@@ -168,7 +168,7 @@ internal sealed class Cpu(IComputer computer)
 		new(CpuInstruction.Sty, CpuAddressingMode.ZeroPageXIndexed),
 		new(CpuInstruction.Sta, CpuAddressingMode.ZeroPageXIndexed),
 		new(CpuInstruction.Stx, CpuAddressingMode.ZeroPageYIndexed),
-		new(CpuInstruction.Sax, CpuAddressingMode.ZeroPageYIndexed),
+		new(CpuInstruction.Sax, CpuAddressingMode.ZeroPageYIndexed, true),
 		new(CpuInstruction.Tya, CpuAddressingMode.Implied),
 		new(CpuInstruction.Sta, CpuAddressingMode.AbsoluteYIndexed),
 		new(CpuInstruction.Txs, CpuAddressingMode.Implied),
@@ -189,7 +189,7 @@ internal sealed class Cpu(IComputer computer)
 		new(CpuInstruction.Tay, CpuAddressingMode.Implied),
 		new(CpuInstruction.Lda, CpuAddressingMode.Immediate),
 		new(CpuInstruction.Tax, CpuAddressingMode.Implied),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.Lxa, CpuAddressingMode.Immediate, true),
 		new(CpuInstruction.Ldy, CpuAddressingMode.Absolute),
 		new(CpuInstruction.Lda, CpuAddressingMode.Absolute),
 		new(CpuInstruction.Ldx, CpuAddressingMode.Absolute),
@@ -223,7 +223,7 @@ internal sealed class Cpu(IComputer computer)
 		new(CpuInstruction.Iny, CpuAddressingMode.Implied),
 		new(CpuInstruction.Cmp, CpuAddressingMode.Immediate),
 		new(CpuInstruction.Dex, CpuAddressingMode.Implied),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.Sbx, CpuAddressingMode.Immediate),
 		new(CpuInstruction.Cpy, CpuAddressingMode.Absolute),
 		new(CpuInstruction.Cmp, CpuAddressingMode.Absolute),
 		new(CpuInstruction.Dec, CpuAddressingMode.Absolute),
@@ -1448,12 +1448,17 @@ internal sealed class Cpu(IComputer computer)
 			case CpuInstruction.Txs: InstTxs(); break;
 			case CpuInstruction.Tya: InstTya(); break;
 
+			case CpuInstruction.Alr: InstAlr(); break;
+			case CpuInstruction.Anc: InstAnc(); break;
+			case CpuInstruction.Arr: InstArr(); break;
 			case CpuInstruction.Dcp: InstDcp(); break;
 			case CpuInstruction.Isc: InstIsc(); break;
 			case CpuInstruction.Lax: InstLax(); break;
+			case CpuInstruction.Lxa: InstLxa(); break;
 			case CpuInstruction.Rla: InstRla(); break;
 			case CpuInstruction.Rra: InstRra(); break;
 			case CpuInstruction.Sax: InstSax(); break;
+			case CpuInstruction.Sbx: InstSbx(); break;
 			case CpuInstruction.Slo: InstSlo(); break;
 			case CpuInstruction.Sre: InstSre(); break;
 			default: throw new NotImplementedException($"Instruction {_op.Instruction} not implemented.");
@@ -1633,8 +1638,10 @@ internal sealed class Cpu(IComputer computer)
 
 		void InstSbc()
 		{
+			var op = _internalOperand;
 			_internalOperand ^= 0xFF;
 			InstAdc();
+			_internalOperand = op;
 		}
 
 		void InstSec() => _flagCarry = true;
@@ -1681,6 +1688,42 @@ internal sealed class Cpu(IComputer computer)
 			_flagZero = _regA == 0;
 		}
 
+		void InstAlr()
+		{
+			InstAnd();
+			var op = _internalOperand;
+			_internalOperand = _regA;
+			InstLsr();
+			_regA = _internalOperand;
+			_internalOperand = op;
+		}
+
+		void InstAnc()
+		{
+			InstAnd();
+			_flagCarry = ((_regA >> 7) & 1) != 0;
+		}
+
+		void InstArr()
+		{
+			// In Binary mode (D flag clear), the instruction effectively does an AND between the accumulator and the immediate parameter
+			InstAnd();
+
+			// and then shifts the accumulator to the right, copying the C flag to the 8th bit.
+			_regA >>= 1;
+			_regA |= (byte)(_flagCarry ? 1 << 7 : 0);
+
+			// It sets the Negative and Zero flags just like the ROR would.
+			_flagNegative = (sbyte)_regA < 0;
+			_flagZero = _regA == 0;
+
+			// The C flag will be copied from the bit 6 of the result (which doesn't seem too logical)
+			_flagCarry = ((_regA >> 6) & 1) != 0;
+
+			// and the V flag is the result of an Exclusive OR operation between the bit 6 and the bit 5 of the result.
+			_flagOverflow = (((_regA >> 6) & 1) ^ ((_regA >> 5) & 1)) != 0;
+		}
+
 		void InstDcp()
 		{
 			InstDec();
@@ -1701,6 +1744,16 @@ internal sealed class Cpu(IComputer computer)
 			_flagZero = _internalOperand == 0;
 		}
 
+		void InstLxa()
+		{
+			const byte randomConst = 0xFF;
+			
+			_regA = (byte)((_regA | randomConst) & _internalOperand);
+			_regX = _regA;
+			_flagNegative = (sbyte)_regA < 0;
+			_flagZero = _regA == 0;
+		}
+
 		void InstRla()
 		{
 			InstRol();
@@ -1714,6 +1767,15 @@ internal sealed class Cpu(IComputer computer)
 		}
 
 		void InstSax() => _internalOperand = (byte)(_regA & _regX);
+
+		void InstSbx()
+		{
+			var resultByte = (byte)((_regA & _regX) - _internalOperand);
+			_flagNegative = (sbyte)resultByte < 0;
+			_flagZero = (sbyte)resultByte == 0;
+			_flagCarry = (_regA & _regX) >= _internalOperand;
+			_regX = resultByte;
+		}
 
 		void InstSlo()
 		{
