@@ -51,9 +51,6 @@
 		<None Update="Tests/**">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
-		<None Update="Tests\nestest\nestest.nes">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
 		<None Update="Tests\nestest\nestest.log">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>

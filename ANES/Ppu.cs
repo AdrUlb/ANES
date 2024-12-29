@@ -53,7 +53,7 @@ internal sealed class Ppu(Nes nes)
 			{
 				for (var tileX = 0; tileX < ScreenWidth / 8; tileX++)
 				{
-					var nametablePatternAddress = nametableBase + tileX + tileY * (ScreenWidth / 8);
+					var nametablePatternAddress = nametableBase + tileX + (tileY + 1) * (ScreenWidth / 8);
 					var attributeAddress = 0x23C0 | (_ctrlBaseNametable << 10) | (tileY / 4 * 8 + tileX / 4);
 					var nametablePattern = nes.PpuMemoryBus.ReadByte((ushort)nametablePatternAddress, true);
 
