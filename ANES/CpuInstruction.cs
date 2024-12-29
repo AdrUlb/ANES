@@ -72,6 +72,8 @@ internal enum CpuInstruction
 	Rra,
 	Sax,
 	Sbx,
+	Shx,
+	Shy,
 	Slo,
 	Sre
 }

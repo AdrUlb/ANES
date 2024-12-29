@@ -173,9 +173,9 @@ internal sealed class Cpu(IComputer computer)
 		new(CpuInstruction.Sta, CpuAddressingMode.AbsoluteYIndexed),
 		new(CpuInstruction.Txs, CpuAddressingMode.Implied),
 		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.Shy, CpuAddressingMode.AbsoluteXIndexed),
 		new(CpuInstruction.Sta, CpuAddressingMode.AbsoluteXIndexed),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.Shx, CpuAddressingMode.AbsoluteYIndexed),
 		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
 		// 0xA0 - 0xAF
 		new(CpuInstruction.Ldy, CpuAddressingMode.Immediate),
@@ -301,6 +301,7 @@ internal sealed class Cpu(IComputer computer)
 
 	private ushort _internalAddress;
 	private byte _internalOperand;
+	private bool _internalBoundaryCrossed;
 	private CpuOperation _op = CpuOperation.None;
 	private int _opCycle;
 
@@ -447,6 +448,7 @@ internal sealed class Cpu(IComputer computer)
 		_op = CpuOperation.None; // Do not wait until the current instruction has finished executing
 		_traceCycles = 0; // Reset trace cycle counting
 		_pendingReset = true;
+		_signalInterruptReset = true;
 	}
 
 	public void RaiseNmi() => _pendingNmi = true;
@@ -465,12 +467,13 @@ internal sealed class Cpu(IComputer computer)
 
 			FetchNextOperation();
 
-			// Always process a reset, process NMIs if not delaying all interrupts, process IRQs if neither delaying all interrupts nor delaing IRQs specifically
 			if (_signalInterruptReset || _signalInterruptNmi || _signalInterruptIrq)
 			{
+				// Undo PC increment from instruction fetch if instruction was not BRK as an interrupt may "cancel" BRK
+				if (_op.Instruction != CpuInstruction.Brk)
+					RegPc--;
 				_op = _operationsByOpcode[0]; // Force BRK into the internal instruction register
 				_servicingInterrupt = true; // Set a flag indicating that the "B flag" is not to be set
-				RegPc--; // Undo PC increment from instruction fetch
 			}
 
 			_opCycle = 1;
@@ -542,6 +545,7 @@ internal sealed class Cpu(IComputer computer)
 			switch (_opCycle)
 			{
 				case 1: // fetch opcode, increment PC
+					break;
 				case 2: // read next instruction byte (and throw it away), increment PC if not serving an interrupt
 					computer.CpuMemoryBus.ReadByte(RegPc);
 					if (!_servicingInterrupt)
@@ -567,12 +571,11 @@ internal sealed class Cpu(IComputer computer)
 						_internalAddress = _interruptVectorNmi;
 						_pendingNmi = false;
 					}
-					else if (_pendingIrq)
+					else
 					{
 						_internalAddress = _interruptVectorIrq;
 						_pendingIrq = false;
 					}
-
 					break;
 				case 5: // push P on stack (with B flag set if not servicing an interrupt), decrement S
 					computer.CpuMemoryBus.WriteByte(RegSp, GetStatusByte(!_servicingInterrupt));
@@ -877,10 +880,12 @@ internal sealed class Cpu(IComputer computer)
 					case 4: // read from effective address, fix the high byte of effective address
 						computer.CpuMemoryBus.ReadByte(_internalAddress);
 						_internalAddress += 0x0100;
+						_internalBoundaryCrossed = true;
 						break;
 					case 5: // re-read from effective address
 						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
 						ExecInst();
+						_internalBoundaryCrossed = false;
 						_op = CpuOperation.None;
 						break;
 				}
@@ -904,7 +909,10 @@ internal sealed class Cpu(IComputer computer)
 					case 4: // read from effective address, fix the high byte of effective address
 						computer.CpuMemoryBus.ReadByte(_internalAddress);
 						if (_internalOperand != 0)
+						{
+							_internalBoundaryCrossed = true;
 							_internalAddress += 0x100;
+						}
 						break;
 					case 5: // re-read from effective address
 						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
@@ -915,6 +923,7 @@ internal sealed class Cpu(IComputer computer)
 						break;
 					case 7: // write the new value to effective address
 						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						_internalBoundaryCrossed = false;
 						_op = CpuOperation.None;
 						break;
 				}
@@ -938,11 +947,15 @@ internal sealed class Cpu(IComputer computer)
 					case 4: // read from effective address, fix the high byte of effective address
 						computer.CpuMemoryBus.ReadByte(_internalAddress);
 						if (_internalOperand != 0)
+						{
+							_internalBoundaryCrossed = true;
 							_internalAddress += 0x100;
+						}
 						break;
 					case 5: // write to effective address
 						ExecInst();
 						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						_internalBoundaryCrossed = false;
 						_op = CpuOperation.None;
 						break;
 				}
@@ -1102,11 +1115,13 @@ internal sealed class Cpu(IComputer computer)
 						break;
 					case 5: // read from effective address, fix high byte of effective address
 						computer.CpuMemoryBus.ReadByte(_internalAddress);
+						_internalBoundaryCrossed = true;
 						_internalAddress += 0x0100;
 						break;
 					case 6: // read from effective address
 						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
 						ExecInst();
+						_internalBoundaryCrossed = false;
 						_op = CpuOperation.None;
 						break;
 				}
@@ -1124,7 +1139,7 @@ internal sealed class Cpu(IComputer computer)
 						break;
 					case 4: // fetch effective address high, add Y to low byte of effective address
 						{
-							// Add Y to low byte, if high byte does not need to be fixed skip cycle 5
+							// Add Y to low byte
 							_internalAddress += _regY;
 							var mustAdjust = _internalAddress > 0xFF;
 							_internalAddress &= 0x00FF;
@@ -1136,7 +1151,10 @@ internal sealed class Cpu(IComputer computer)
 					case 5: // read from effective address, fix high byte of effective address
 						computer.CpuMemoryBus.ReadByte(_internalAddress);
 						if (_internalOperand != 0)
+						{
+							_internalBoundaryCrossed = true;
 							_internalAddress += 0x100;
+						}
 						break;
 					case 6: // read from effective address
 						_internalOperand = computer.CpuMemoryBus.ReadByte(_internalAddress);
@@ -1147,6 +1165,7 @@ internal sealed class Cpu(IComputer computer)
 						break;
 					case 8: // write the new value to effective address
 						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						_internalBoundaryCrossed = false;
 						_op = CpuOperation.None;
 						break;
 				}
@@ -1176,11 +1195,15 @@ internal sealed class Cpu(IComputer computer)
 					case 5: // read from effective address, fix high byte of effective address
 						computer.CpuMemoryBus.ReadByte(_internalAddress);
 						if (_internalOperand != 0)
+						{
+							_internalBoundaryCrossed = true;
 							_internalAddress += 0x100;
+						}
 						break;
 					case 6: // write to effective address
 						ExecInst();
 						computer.CpuMemoryBus.WriteByte(_internalAddress, _internalOperand);
+						_internalBoundaryCrossed = false;
 						_op = CpuOperation.None;
 						break;
 				}
@@ -1459,6 +1482,8 @@ internal sealed class Cpu(IComputer computer)
 			case CpuInstruction.Rra: InstRra(); break;
 			case CpuInstruction.Sax: InstSax(); break;
 			case CpuInstruction.Sbx: InstSbx(); break;
+			case CpuInstruction.Shx: InstShx(); break;
+			case CpuInstruction.Shy: InstShy(); break;
 			case CpuInstruction.Slo: InstSlo(); break;
 			case CpuInstruction.Sre: InstSre(); break;
 			default: throw new NotImplementedException($"Instruction {_op.Instruction} not implemented.");
@@ -1747,7 +1772,7 @@ internal sealed class Cpu(IComputer computer)
 		void InstLxa()
 		{
 			const byte randomConst = 0xFF;
-			
+
 			_regA = (byte)((_regA | randomConst) & _internalOperand);
 			_regX = _regA;
 			_flagNegative = (sbyte)_regA < 0;
@@ -1775,6 +1800,22 @@ internal sealed class Cpu(IComputer computer)
 			_flagZero = (sbyte)resultByte == 0;
 			_flagCarry = (_regA & _regX) >= _internalOperand;
 			_regX = resultByte;
+		}
+
+		void InstShx()
+		{
+			if (_internalBoundaryCrossed)
+				_internalAddress &= (ushort)(_regX << 8);
+
+			_internalOperand = (byte)(_regX & (byte)((_internalAddress >> 8) + 1));
+		}
+
+		void InstShy()
+		{
+			if (_internalBoundaryCrossed)
+				_internalAddress &= (ushort)(_regY << 8);
+
+			_internalOperand = (byte)(_regY & (byte)((_internalAddress >> 8) + 1));
 		}
 
 		void InstSlo()

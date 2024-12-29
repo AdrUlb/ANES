@@ -81,10 +81,12 @@ internal readonly struct CpuOperation(CpuInstruction instruction, CpuAddressingM
 		CpuInstruction.Lxa => CpuOperationType.Implied,
 		CpuInstruction.Rla => CpuOperationType.ReadModifyWrite,
 		CpuInstruction.Rra => CpuOperationType.ReadModifyWrite,
-		CpuInstruction.Sbx => CpuOperationType.Implied,
 		CpuInstruction.Sax => CpuOperationType.Write,
+		CpuInstruction.Sbx => CpuOperationType.Implied,
+		CpuInstruction.Shx => CpuOperationType.Write,
+		CpuInstruction.Shy => CpuOperationType.Write,
 		CpuInstruction.Slo => CpuOperationType.ReadModifyWrite,
 		CpuInstruction.Sre => CpuOperationType.ReadModifyWrite,
-		_ => throw new UnreachableException()
+		_ => throw new UnreachableException($"Operation type for {instruction} not specified.")
 	};
 }
