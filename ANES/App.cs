@@ -46,7 +46,7 @@ internal readonly struct MainDisplay
 		var pixels = surface.GetPixels<int>();
 		for (var y = 0; y < Ppu.ScreenHeight; y++)
 		for (var x = 0; x < Ppu.ScreenWidth; x++)
-			pixels[x + y * surface.Pitch / 4] = _nes.Ppu.Pixels[x + y * Ppu.ScreenWidth].ToArgb();
+			pixels[x + y * surface.Pitch / 4] = _nes.Ppu.Picture[x + y * Ppu.ScreenWidth].ToArgb();
 
 		_renderer.Clear();
 		_texture.Unlock();

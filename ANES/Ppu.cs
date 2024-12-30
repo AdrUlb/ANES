@@ -13,7 +13,6 @@ internal sealed class Ppu(Nes nes)
 	private bool _statusSprite0 = false;
 	private bool _statusSpriteOverflow = false;
 
-	private int _ctrlBaseNametable = 0;
 	private bool _ctrlVramIncrement32 = false;
 	private bool _ctrlSpritePatternTable = false;
 	private bool _ctrlBackgroundPatternTable = false;
@@ -26,12 +25,16 @@ internal sealed class Ppu(Nes nes)
 	private bool _raiseNmi = false;
 	private byte _latchValue = 0;
 
+	private ushort _regV;
+	private ushort _regT;
+	private byte _regX;
+	private bool _regW;
+
 	// TODO: implement these properly
-	private ushort _ppuAddress = 0;
 	private ushort _oamAddr = 0;
 	private readonly byte[] _palette = File.ReadAllBytes("Palette.pal");
 
-	internal Color[] Pixels = new Color[ScreenWidth * ScreenHeight];
+	internal readonly Color[] Picture = new Color[ScreenWidth * ScreenHeight];
 
 	public void Tick()
 	{
@@ -40,7 +43,8 @@ internal sealed class Ppu(Nes nes)
 		// TODO: Implement this properly, this is obviously a BAD hack
 		if (_dot == 340 * 260)
 		{
-			var nametableBase = _ctrlBaseNametable switch
+			var ctrlBaseNametable = (_regT >> 10) & 0b11;
+			var nametableBase = ctrlBaseNametable switch
 			{
 				0 => 0x2000,
 				1 => 0x2400,
@@ -53,8 +57,8 @@ internal sealed class Ppu(Nes nes)
 			{
 				for (var tileX = 0; tileX < ScreenWidth / 8; tileX++)
 				{
-					var nametablePatternAddress = nametableBase + tileX + (tileY + 1) * (ScreenWidth / 8);
-					var attributeAddress = 0x23C0 | (_ctrlBaseNametable << 10) | (tileY / 4 * 8 + tileX / 4);
+					var nametablePatternAddress = nametableBase + tileX + tileY * (ScreenWidth / 8);
+					var attributeAddress = 0x23C0 | (ctrlBaseNametable << 10) | (tileY / 4 * 8 + tileX / 4);
 					var nametablePattern = nes.PpuMemoryBus.ReadByte((ushort)nametablePatternAddress, true);
 
 					var attribute = nes.PpuMemoryBus.ReadByte((ushort)attributeAddress);
@@ -95,7 +99,7 @@ internal sealed class Ppu(Nes nes)
 								_ => throw new UnreachableException()
 							};
 
-							Pixels[index] = Color.FromArgb(_palette[paletteOffset * 3 + 0], _palette[paletteOffset * 3 + 1], _palette[paletteOffset * 3 + 2]);
+							Picture[index] = Color.FromArgb(_palette[paletteOffset * 3 + 0], _palette[paletteOffset * 3 + 1], _palette[paletteOffset * 3 + 2]);
 						}
 					}
 				}
@@ -105,6 +109,52 @@ internal sealed class Ppu(Nes nes)
 				_raiseNmi = true;
 
 			_dot = 0;
+		}
+
+		return;
+
+		void IncrementCoarseX()
+		{
+			// The coarse X component of v needs to be incremented when the next tile is reached. Bits 0-4 are incremented, with overflow toggling bit 10.
+			// This means that bits 0-4 count from 0 to 31 across a single nametable, and bit 10 selects the current nametable horizontally.
+			if ((_regV & 0x001F) == 31) // if coarse X == 31
+			{
+				_regV &= unchecked((ushort)~0x001F); // coarse X = 0
+				_regV ^= 0x0400; // switch horizontal nametable
+			}
+			else
+				_regV++; // increment coarse X
+		}
+
+		void IncrementY()
+		{
+			if ((_regV & 0x7000) != 0x7000) // If fine Y < 7
+			{
+				_regV += 0x1000; // Increment fine Y
+			}
+			else
+			{
+				_regV &= unchecked((ushort)~0x7000); // Fine Y = 0
+
+				var coarseY = (_regV & 0x03E0) >> 5;
+
+				switch (coarseY)
+				{
+					case 29:
+						coarseY = 0; // Coarse Y = 0
+						_regV ^= 0x0800; // Switch vertical nametable
+						break;
+					case 31:
+						coarseY = 0; // Coarse Y = 0, nametable not switched
+						break;
+					default:
+						coarseY += 1; // Increment coarse Y
+						break;
+				}
+				// Put coarse Y back into v
+				_regV &= unchecked((ushort)~0x03E0);
+				_regV |= (ushort)(coarseY << 5);
+			}
 		}
 	}
 
@@ -124,25 +174,26 @@ internal sealed class Ppu(Nes nes)
 		switch (index)
 		{
 			case 2: // PPUSTATUS
-				// TODO: Reading this register has the side effect of clearing the PPU's internal w register.
 				// TODO: PPU OPEN BUS
 				ret = (byte)(
 					(_statusVblank ? 1 << 7 : 0) |
 					(_statusSprite0 ? 1 << 6 : 0) |
 					(_statusSpriteOverflow ? 1 << 5 : 0)
 				);
+				_regW = false;
 				break;
 			case 4: // OAMDATA
 				// TODO
 				break;
 			case 7: // PPUDATA
-				// TODO: After access, the video memory address will increment by an amount determined by bit 2 of $2000.
-				// TODO: VRAM reading and writing shares the same internal address register that rendering uses.
-				ret = nes.PpuMemoryBus.ReadByte(_ppuAddress);
+				// Note that while the v register has 15 bits, the PPU memory space is only 14 bits wide. The highest bit is unused for access through $2007.
+				// TODO: During rendering (on the pre-render line and the visible lines 0-239, provided either background or sprite rendering is enabled),
+				//	it will update v in an odd way, triggering a coarse X increment and a Y increment simultaneously (with normal wrapping behavior).
+				ret = nes.PpuMemoryBus.ReadByte((ushort)(_regV & 0b11_1111_1111_1111));
 				if (_ctrlVramIncrement32)
-					_ppuAddress += 32;
+					_regV += 32;
 				else
-					_ppuAddress++;
+					_regV++;
 				break;
 		}
 
@@ -160,7 +211,7 @@ internal sealed class Ppu(Nes nes)
 					This happens during vblank if the PPUSTATUS register has not yet been read.
 					It can result in graphical glitches by making the NMI routine execute too late in vblank to finish on time, or cause the game to handle more frames than have actually occurred.
 					To avoid this problem, it is prudent to read PPUSTATUS first to clear the vblank flag before enabling NMI in PPUCTRL. */
-				_ctrlBaseNametable = value & 0b11;
+				_regT = (ushort)((_regT & 0b111_0011_1111_1111) | ((value & 0b11) << 10));
 				_ctrlVramIncrement32 = ((value >> 2) & 1) != 0;
 				_ctrlSpritePatternTable = ((value >> 3) & 1) != 0;
 				_ctrlBackgroundPatternTable = ((value >> 4) & 1) != 0;
@@ -178,22 +229,53 @@ internal sealed class Ppu(Nes nes)
 				// TODO
 				break;
 			case 5: // PPUSCROLL
-				// TODO
+				if (!_regW)
+				{
+					// t: ....... ...ABCDE <- d: ABCDE...
+					_regT &= 0b111_1111_1110_0000;
+					_regT |= (ushort)((value >> 3) & 0b111);
+
+					// x:              FGH <- d: .....FGH
+					_regX = (byte)(value & 0b111);
+				}
+				else
+				{
+					// t: FGH..AB CDE..... <- d: ABCDEFGH
+					_regT &= 0b000_1100_0001_1111;
+					_regT |= (ushort)(((value >> 3) & 0b11111) << 5);
+					_regT |= (ushort)((value & 0b111) << 12);
+				}
+				_regW = !_regW;
 				break;
 			case 6: // PPUADDR
-				/* TODO: Whether this is the first or second write is tracked by the PPU's internal w register, which is shared with PPUSCROLL.
-					If w is not 0 or its state is not known, it must be cleared by reading PPUSTATUS before writing the address. */
-				_ppuAddress <<= 8;
-				_ppuAddress |= value;
+				if (!_regW) // first write (w is 0)
+				{
+					// t: .CDEFGH ........ <- d: ..CDEFGH
+					// t: Z...... ........ <- 0 (bit Z is cleared)
+					_regT &= 0b000_0000_1111_1111;
+					_regT |= (ushort)((value & 0b11_1111) << 8);
+				}
+				else // second write (w is 1)
+				{
+					// t: ....... ABCDEFGH <- d: ABCDEFGH
+					_regT &= 0b111_1111_0000_0000;
+					_regT |= value;
+
+					// v: <...all bits...> <- t: <...all bits...>
+					_regV = _regT;
+				}
+				_regW = !_regW;
 				break;
 			case 7: // PPUDATA
-				// TODO: After access, the video memory address will increment by an amount determined by bit 2 of $2000.
-				// TODO: VRAM reading and writing shares the same internal address register that rendering uses.
-				nes.PpuMemoryBus.WriteByte(_ppuAddress, value);
+				// Note that while the v register has 15 bits, the PPU memory space is only 14 bits wide. The highest bit is unused for access through $2007.
+				// TODO: During rendering (on the pre-render line and the visible lines 0-239, provided either background or sprite rendering is enabled),
+				//	it will update v in an odd way, triggering a coarse X increment and a Y increment simultaneously (with normal wrapping behavior).
+				//	see: https://www.nesdev.org/wiki/PPU_scrolling#$2007_(PPUDATA)_reads_and_writes
+				nes.PpuMemoryBus.WriteByte((ushort)(_regV & 0b11_1111_1111_1111), value);
 				if (_ctrlVramIncrement32)
-					_ppuAddress += 32;
+					_regV += 32;
 				else
-					_ppuAddress++;
+					_regV++;
 				break;
 		}
 	}
