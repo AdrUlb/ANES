@@ -8,6 +8,9 @@ internal readonly struct MainDisplay
 {
 	private const int _scale = 3;
 
+	private const int _screenWidth = 256;
+	private const int _screenHeight = 224;
+
 	private readonly Nes _nes;
 
 	private readonly SdlWindow _window;
@@ -21,15 +24,15 @@ internal readonly struct MainDisplay
 		_nes = nes;
 		(_window, _renderer) = SdlWindow.CreateWithRenderer(
 			"ANES: Adrian's NES Emulator",
-			Ppu.ScreenWidth * _scale,
-			Ppu.ScreenHeight * _scale,
+			_screenWidth * _scale,
+			_screenHeight * _scale,
 			SdlWindowFlags.Resizable
 		);
 
 		var tilesTexProps = SdlProperties.Create();
 		tilesTexProps.Set(SdlProperties.TextureCreateAccess, (long)SdlTextureAccess.Streaming);
-		tilesTexProps.Set(SdlProperties.TextureCreateWidth, Ppu.ScreenWidth);
-		tilesTexProps.Set(SdlProperties.TextureCreateHeight, Ppu.ScreenHeight);
+		tilesTexProps.Set(SdlProperties.TextureCreateWidth, _screenWidth);
+		tilesTexProps.Set(SdlProperties.TextureCreateHeight, _screenHeight);
 		tilesTexProps.Set(SdlProperties.TextureCreateFormat, (long)SdlPixelFormat.Argb8888);
 		_texture = SdlTexture.CreateWithProperties(_renderer, tilesTexProps);
 		_texture.SetScaleMode(SdlScaleMode.Nearest);
@@ -44,9 +47,9 @@ internal readonly struct MainDisplay
 			throw new UnreachableException();
 
 		var pixels = surface.GetPixels<int>();
-		for (var y = 0; y < Ppu.ScreenHeight; y++)
-		for (var x = 0; x < Ppu.ScreenWidth; x++)
-			pixels[x + y * surface.Pitch / 4] = _nes.Ppu.Picture[x + y * Ppu.ScreenWidth].ToArgb();
+		for (var y = 0; y < _screenHeight; y++)
+		for (var x = 0; x < _screenWidth; x++)
+			pixels[x + y * surface.Pitch / 4] = _nes.Ppu.Picture[x + y * Ppu.PictureWidth].ToArgb();
 
 		_renderer.Clear();
 		_texture.Unlock();
