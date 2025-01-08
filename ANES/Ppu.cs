@@ -1,7 +1,14 @@
 using System.Diagnostics;
 using System.Drawing;
+using System.Runtime.CompilerServices;
 
 namespace ANES;
+
+// https://www.nesdev.org/wiki/PPU_rendering
+// https://www.nesdev.org/wiki/PPU_programmer_reference
+// https://www.nesdev.org/wiki/PPU_registers
+// https://www.nesdev.org/wiki/PPU_scrolling
+// https://www.nesdev.org/wiki/PPU_sprite_evaluation
 
 internal sealed class Ppu(Nes nes)
 {
@@ -30,8 +37,8 @@ internal sealed class Ppu(Nes nes)
 	private bool _maskEmphasizeBlue; // TODO
 
 	private bool _oddFrame = false;
-	private ulong _dotX = 0;
-	private ulong _dotY = 261;
+	private int _scanline = 261;
+	private int _cycle = 0;
 
 	private bool _raiseNmi = false;
 
@@ -40,11 +47,21 @@ internal sealed class Ppu(Nes nes)
 	private byte _regX;
 	private bool _regW;
 
-	// TODO: implement these properly
-	private ushort _oamAddr = 0;
+	private byte _bgTileLatch;
+	private byte _bgAttributeLatch;
+	private byte _bgPAtternLowLatch;
+	private byte _bgPAtternHighLatch;
+
+	private byte _bgTileShifter;
+	private byte _bgAttributeShifter;
+	private byte _bgPatternLowShifter;
+	private byte _bgPatternHighShifter;
+
 	private readonly byte[] _palette = File.ReadAllBytes("Palette.pal");
 
 	internal readonly Color[] Picture = new Color[PictureWidth * PictureHeight];
+
+	private bool IsRenderingEnabled => _maskEnableBackground || _maskEnableSprites;
 
 	public byte ReadReg(int index, bool suppressSideEffects = false)
 	{
@@ -68,7 +85,7 @@ internal sealed class Ppu(Nes nes)
 				// Note that while the v register has 15 bits, the PPU memory space is only 14 bits wide. The highest bit is unused for access through $2007.
 				// TODO: During rendering (on the pre-render line and the visible lines 0-239, provided either background or sprite rendering is enabled),
 				//	it will update v in an odd way, triggering a coarse X increment and a Y increment simultaneously (with normal wrapping behavior).
-				ret = nes.PpuMemoryBus.ReadByte((ushort)(_regV & 0b11_1111_1111_1111));
+				ret = nes.PpuBus.ReadByte((ushort)(_regV & 0b11_1111_1111_1111));
 				if (_ctrlVramIncrement32)
 					_regV += 32;
 				else
@@ -159,7 +176,7 @@ internal sealed class Ppu(Nes nes)
 				// TODO: During rendering (on the pre-render line and the visible lines 0-239, provided either background or sprite rendering is enabled),
 				//	it will update v in an odd way, triggering a coarse X increment and a Y increment simultaneously (with normal wrapping behavior).
 				//	see: https://www.nesdev.org/wiki/PPU_scrolling#$2007_(PPUDATA)_reads_and_writes
-				nes.PpuMemoryBus.WriteByte((ushort)(_regV & 0b11_1111_1111_1111), value);
+				nes.PpuBus.WriteByte((ushort)(_regV & 0b11_1111_1111_1111), value);
 				if (_ctrlVramIncrement32)
 					_regV += 32;
 				else
@@ -170,96 +187,83 @@ internal sealed class Ppu(Nes nes)
 
 	public void Tick()
 	{
-		if (_dotY == 241 && _dotX == 1)
+		switch (_scanline)
 		{
-			// Set Vblank flag
-			_statusVblank = true;
-
-			if (_ctrlVblankNmiEnable)
-				_raiseNmi = true;
-		}
-
-		if (_dotY == 261 && _dotX == 1)
-		{
-			// TODO: Clear sprite 0
-			// TODO: Clear overflow
-			_statusVblank = false;
-		}
-
-		// TODO: This is an ugly hack
-		if (_dotY <= 239 && _dotX == 340)
-		{
-			var ctrlBaseNametable = (_regT >> 10) & 0b11;
-			var nametableBase = ctrlBaseNametable switch
-			{
-				0 => 0x2000,
-				1 => 0x2400,
-				2 => 0x2800,
-				3 => 0x2C00,
-				_ => throw new UnreachableException()
-			};
-
-			var tileY = (int)(_dotY / 8);
-			for (var tileX = 0; tileX < PictureWidth / 8; tileX++)
-			{
-				var nametablePatternAddress = nametableBase + tileX + tileY * (PictureWidth / 8);
-				var attributeAddress = 0x23C0 | (ctrlBaseNametable << 10) | (tileY / 4 * 8 + tileX / 4);
-				var nametablePattern = nes.PpuMemoryBus.ReadByte((ushort)nametablePatternAddress, true);
-
-				var attribute = nes.PpuMemoryBus.ReadByte((ushort)attributeAddress);
-				if (tileX % 4 != 0)
-					attribute >>= 2;
-				if (tileY % 4 != 0)
-					attribute >>= 4;
-				attribute &= 0b11;
-
-				var surfX = tileX * 8;
-				var surfY = tileY * 8;
-
-				var y = (int)(_dotY % 8);
+			case < 240 or 261: // Scanlines 0-239 and 261 (visible scanlines and pre-render line)
 				{
-					var patternPlane0Index = (_ctrlBackgroundPatternTable ? 1 << 12 : 0) | (nametablePattern << 4) | y;
-					var patternPlane1Index = patternPlane0Index | (1 << 3);
+					FetchBackground();
 
-					var patternPlane0 = nes.PpuMemoryBus.ReadByte((ushort)patternPlane0Index, true);
-					var patternPlane1 = nes.PpuMemoryBus.ReadByte((ushort)patternPlane1Index, true);
+					// Between dot 328 of a scanline, and 256 of the next scanline
+					// If rendering is enabled, the PPU increments the horizontal position in v many times across the scanline, it begins at dots 328 and 336,
+					// and will continue through the next scanline at 8, 16, 24... 240, 248, 256 (every 8 dots across the scanline until 256).
+					// Across the scanline the effective coarse X scroll coordinate is incremented repeatedly, which will also wrap to the next nametable appropriately.
+					if (_cycle is <= 256 or >= 328 && ((_cycle - 1) % 8) == 0 && IsRenderingEnabled)
+						IncrementCoarseX();
 
-					for (var x = 0; x < 8; x++)
+					// At dot 256 of each scanline
+					// If rendering is enabled, the PPU increments the vertical position in v.
+					// The effective Y scroll coordinate is incremented, which is a complex operation that will correctly skip the attribute table memory regions,
+					// and wrap to the next nametable appropriately.
+					if (_cycle == 256 && IsRenderingEnabled)
+						IncrementY();
+
+					// At dot 257 of each scanline
+					// If rendering is enabled, the PPU copies all bits related to horizontal position from t to v
+					if (_cycle == 257 && IsRenderingEnabled)
 					{
-						var patternBit0 = (patternPlane0 >> (8 - 1 - x)) & 1;
-						var patternBit1 = (patternPlane1 >> (8 - 1 - x)) & 1;
-
-						var colorIndex = (patternBit1 << 1) | patternBit0;
-
-						var xx = x + surfX;
-						var yy = y + surfY;
-						var index = xx + yy * PictureWidth;
-
-						var paletteOffset = colorIndex switch
-						{
-							0 => nes.PpuMemoryBus.ReadByte(0x3F00),
-							1 => nes.PpuMemoryBus.ReadByte((ushort)(0x3F00 | (4 * attribute + 1))),
-							2 => nes.PpuMemoryBus.ReadByte((ushort)(0x3F00 | (4 * attribute + 2))),
-							3 => nes.PpuMemoryBus.ReadByte((ushort)(0x3F00 | (4 * attribute + 3))),
-							_ => throw new UnreachableException()
-						};
-
-						Picture[index] = Color.FromArgb(_palette[paletteOffset * 3 + 0], _palette[paletteOffset * 3 + 1], _palette[paletteOffset * 3 + 2]);
+						// v: ....A.. ...BCDEF <- t: ....A.. ...BCDEF
+						_regV &= 0b111_1011_1110_0000;
+						_regV |= (ushort)(_regT & 0b000_0100_0001_1111);
 					}
+
+					if (_scanline == 261)
+					{
+						if (_cycle == 1)
+						{
+							_statusVblank = false;
+							_statusSpriteOverflow = false;
+							_statusSprite0 = false;
+						}
+
+						// If rendering is enabled, at the end of vblank, shortly after the horizontal bits are copied from t to v at dot 257,
+						// the PPU will repeatedly copy the vertical bits from t to v from dots 280 to 304, completing the full initialization of v from t
+						if (_cycle is >= 280 and <= 304 && IsRenderingEnabled)
+						{
+							// v: GHIA.BC DEF..... <- t: GHIA.BC DEF.....
+							_regV &= 0b000_0100_0001_1111;
+							_regV |= (ushort)(_regT & 0b111_1011_1110_0000);
+						}
+					}
+
+					if (_scanline != 261 && _cycle is >= 1 and <= 256)
+						DrawDot();
+
+					break;
 				}
-			}
+			case 241: // Scanline 241
+				{
+					if (_cycle == 1)
+					{
+						// Set Vblank flag
+						_statusVblank = true;
+
+						if (_ctrlVblankNmiEnable)
+							_raiseNmi = true;
+					}
+					break;
+				}
 		}
 
-		_dotX++;
+		_cycle++;
 		// Skip one dot on odd frames
-		if (_dotX > 340 || (_dotY == 261 && _oddFrame && _dotX >= 340))
+		if (_cycle > 340 || (_scanline == 261 && _oddFrame && _cycle >= 340))
 		{
 			_oddFrame = !_oddFrame;
-			_dotX = 0;
-			_dotY++;
+			_cycle = 0;
+			_scanline++;
 
-			if (_dotY > 261)
-				_dotY = 0;
+			if (_scanline > 261)
+				_scanline = 0;
 		}
 	}
 
@@ -272,7 +276,110 @@ internal sealed class Ppu(Nes nes)
 		return true;
 	}
 
-	void IncrementCoarseX()
+	private void FetchBackground()
+	{
+		var fetchStep = (_cycle - 1) % 8;
+
+		// https://www.nesdev.org/wiki/PPU_scrolling#Tile_and_attribute_fetching
+		// The data for each tile is fetched during this phase. Each memory access takes 2 PPU cycles to complete, and 4 must be performed per tile
+		// The data fetched from these accesses is placed into internal latches, and then fed to the appropriate shift registers when it's time to do so (every 8 cycles).
+		// Because the PPU can only fetch an attribute byte every 8 cycles, each sequential string of 8 pixels is forced to have the same palette attribute.
+		if (_cycle is (>= 1 and <= 256) or (>= 321 and <= 336))
+		{
+			switch (fetchStep)
+			{
+				case 1: // Nametable byte
+					{
+						var addr = (ushort)(0x2000 | (_regV & 0x0FFF));
+						_bgTileLatch = nes.PpuBus.ReadByte(addr);
+						break;
+					}
+				case 3: // Attribute table byte
+					{
+						var addr = (ushort)(0x23C0 | (_regV & 0x0C00) | ((_regV >> 4) & 0x38) | ((_regV >> 2) & 0x07));
+						_bgAttributeLatch = nes.PpuBus.ReadByte(addr);
+						break;
+					}
+				case 5: // Pattern table tile low
+					{
+						var half = _ctrlBackgroundPatternTable ? 1 : 0;
+						var fineY = (_regV >> 12) & 0b111;
+						var addr = (ushort)((half << 12) | (_bgTileLatch << 4) | fineY);
+						_bgPAtternLowLatch = nes.PpuBus.ReadByte(addr);
+						break;
+					}
+				case 7: // Pattern table tile high
+					{
+						var half = _ctrlBackgroundPatternTable ? 1 : 0;
+						var fineY = (_regV >> 12) & 0b111;
+						var addr = (ushort)((half << 12) | (_bgTileLatch << 4) | fineY);
+						_bgPAtternHighLatch = nes.PpuBus.ReadByte((ushort)(addr + 8));
+						break;
+					}
+			}
+		}
+
+		// The shifters are reloaded during ticks 9, 17, 25, ..., 257.
+		if (_cycle is >= 1 + 8 and <= 256 + 8 && fetchStep == 0)
+		{
+			_bgTileShifter = _bgTileLatch;
+			_bgAttributeShifter = _bgAttributeLatch;
+			_bgPatternLowShifter = _bgPAtternLowLatch;
+			_bgPatternHighShifter = _bgPAtternHighLatch;
+		}
+
+		// TODO: (https://www.nesdev.org/wiki/PPU_rendering#Cycles_257-320)
+	}
+
+	private void DrawDot()
+	{
+		// TODO: This is an ugly hack
+		var tileY = (_regV >> 5) & 0b11111;
+		var tileX = (_cycle - 1) / 8;
+
+		var attribute = _bgAttributeShifter;
+		if (tileX % 4 != 0)
+			attribute >>= 2;
+		if (tileY % 4 != 0)
+			attribute >>= 4;
+		attribute &= 0b11;
+
+		{
+			var patternPlane0 = _bgPatternLowShifter;
+			var patternPlane1 = _bgPatternHighShifter;
+
+			var yy = _scanline;
+			if (yy < PictureHeight)
+			{
+				var x = (_cycle - 1) % 8;
+				{
+					var patternBit0 = (patternPlane0 >> (8 - 1 - x)) & 1;
+					var patternBit1 = (patternPlane1 >> (8 - 1 - x)) & 1;
+
+					var colorIndex = (patternBit1 << 1) | patternBit0;
+
+					var xx = _cycle - 1;
+					if (xx < PictureWidth)
+					{
+						var index = xx + yy * PictureWidth;
+
+						var paletteOffset = colorIndex switch
+						{
+							0 => nes.PpuBus.ReadByte(0x3F00),
+							1 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * attribute + 1))),
+							2 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * attribute + 2))),
+							3 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * attribute + 3))),
+							_ => throw new UnreachableException()
+						};
+
+						Picture[index] = Color.FromArgb(_palette[paletteOffset * 3 + 0], _palette[paletteOffset * 3 + 1], _palette[paletteOffset * 3 + 2]);
+					}
+				}
+			}
+		}
+	}
+
+	private void IncrementCoarseX()
 	{
 		// The coarse X component of v needs to be incremented when the next tile is reached. Bits 0-4 are incremented, with overflow toggling bit 10.
 		// This means that bits 0-4 count from 0 to 31 across a single nametable, and bit 10 selects the current nametable horizontally.
@@ -285,7 +392,7 @@ internal sealed class Ppu(Nes nes)
 			_regV++; // increment coarse X
 	}
 
-	void IncrementY()
+	private void IncrementY()
 	{
 		if ((_regV & 0x7000) != 0x7000) // If fine Y < 7
 		{

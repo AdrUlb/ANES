@@ -1,6 +1,6 @@
 namespace ANES;
 
-internal sealed class CpuMemoryBus(Nes nes) : IMemoryBus
+internal sealed class CpuBus(Nes nes) : IMemoryBus
 {
 	public byte ReadByte(ushort address, bool suppressSideEffects = false)
 	{

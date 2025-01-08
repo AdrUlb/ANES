@@ -12,9 +12,9 @@ internal sealed class Nes : IComputer
 	internal readonly byte[] Vram = new byte[0x800];
 	internal readonly byte[] PaletteRam = new byte[0x20];
 
-	public IMemoryBus CpuMemoryBus { get; }
+	public IMemoryBus CpuBus { get; }
 
-	public IMemoryBus PpuMemoryBus { get; }
+	public IMemoryBus PpuBus { get; }
 
 	internal readonly Controllers Controllers = new();
 	internal readonly Cartridge Cartridge;
@@ -24,9 +24,9 @@ internal sealed class Nes : IComputer
 	public Nes()
 	{
 		_thread = new(ThreadProc);
-		CpuMemoryBus = new CpuMemoryBus(this);
-		PpuMemoryBus = new PpuMemoryBus(this);
-		Cartridge = new(this, "/home/adrian/roms/nes/donkeykong.nes");
+		CpuBus = new CpuBus(this);
+		PpuBus = new PpuBus(this);
+		Cartridge = new(this, "/home/adrian/roms/nes/smb1.nes");
 		Ppu = new(this);
 		_cpu = new(this);
 		_cpu.Reset();
