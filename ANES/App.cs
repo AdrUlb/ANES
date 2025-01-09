@@ -7,9 +7,10 @@ namespace ANES;
 internal readonly struct MainDisplay
 {
 	private const int _scale = 3;
+	private const bool _palResolution = true;
 
 	private const int _screenWidth = 256;
-	private const int _screenHeight = 224;
+	private const int _screenHeight = _palResolution ? 240 : 224;
 
 	private readonly Nes _nes;
 
@@ -31,8 +32,8 @@ internal readonly struct MainDisplay
 
 		var tilesTexProps = SdlProperties.Create();
 		tilesTexProps.Set(SdlProperties.TextureCreateAccess, (long)SdlTextureAccess.Streaming);
-		tilesTexProps.Set(SdlProperties.TextureCreateWidth, _screenWidth);
-		tilesTexProps.Set(SdlProperties.TextureCreateHeight, _screenHeight);
+		tilesTexProps.Set(SdlProperties.TextureCreateWidth, Ppu.PictureWidth);
+		tilesTexProps.Set(SdlProperties.TextureCreateHeight, Ppu.PictureHeight);
 		tilesTexProps.Set(SdlProperties.TextureCreateFormat, (long)SdlPixelFormat.Argb8888);
 		_texture = SdlTexture.CreateWithProperties(_renderer, tilesTexProps);
 		_texture.SetScaleMode(SdlScaleMode.Nearest);
@@ -43,16 +44,17 @@ internal readonly struct MainDisplay
 	{
 		var surface = _texture.LockToSurface();
 
-		for (var y = 0; y < _screenHeight; y++)
+		for (var y = 0; y < Ppu.PictureHeight; y++)
 		{
 			var row = surface.GetPixels<int>(y);
 			for (var x = 0; x < _screenWidth; x++)
-				row[x] = _nes.Ppu.Picture[x + (y + 8) * Ppu.PictureWidth].ToArgb();
+				row[x] = _nes.Ppu.Picture[x + y * Ppu.PictureWidth].ToArgb();
 		}
 
 		_renderer.Clear();
 		_texture.Unlock();
-		_texture.Render();
+		var srcRect = new RectangleF(0, _palResolution ? 0 : 8, _screenWidth, _screenHeight);
+		_texture.Render(srcRect, RectangleF.Empty);
 		_renderer.Present();
 	}
 
