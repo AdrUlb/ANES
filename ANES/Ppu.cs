@@ -269,6 +269,7 @@ internal sealed class Ppu(Nes nes)
 						var coarseXHigh3 = coarseX >> 2;
 						var coarseYHigh3 = coarseY >> 2;
 						var addr = (ushort)(0x23C0 | (nametable << 10) | (coarseYHigh3 << 3) | coarseXHigh3);
+						//var addr = (ushort)(0x23C0 | (_regV & 0x0C00) | ((_regV >> 4) & 0x38) | ((_regV >> 2) & 0x07));
 						_bgAttributeFetch = nes.PpuBus.ReadByte(addr);
 						break;
 					}
@@ -290,8 +291,6 @@ internal sealed class Ppu(Nes nes)
 					}
 				case 7:
 					{
-						IncrementCoarseX();
-
 						// On every 8th dot in these background fetch regions (the same dot on which the coarse x component of v is incremented),
 						// the pattern and attributes data are transferred into registers used for producing pixel data.
 						// For the pattern data, these transfers are into the high 8 bits of two 16-bit shift registers.
@@ -300,13 +299,6 @@ internal sealed class Ppu(Nes nes)
 						var coarseX = _regV & 0b11111;
 						var coarseY = (_regV >> 5) & 0b11111;
 
-
-						/*var attribute = _bgAttributeFetch;
-						if (((coarseX >> 1) & 1) != 0)
-							attribute >>= 2;
-						if (((coarseY >> 1) & 1) != 0)
-							attribute >>= 4;*/
-						//attribute &= 0b11;
 						var attribute = ((coarseX >> 1) & 1, (coarseY >> 1) & 1) switch
 						{
 							(0, 0) => (_bgAttributeFetch >> 0) & 0b11,
@@ -321,6 +313,9 @@ internal sealed class Ppu(Nes nes)
 
 						_bgPatternLowShifter |= _bgPatternLowFetch;
 						_bgPatternHighShifter |= _bgPatternHighFetch;
+						
+						IncrementCoarseX();
+
 					}
 					break;
 			}
