@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace ANES;
 
-internal sealed class Nes : IComputer
+internal sealed class Nes : Computer
 {
 	private readonly Thread _thread;
 	private readonly object _startStopLock = new();
@@ -12,9 +12,9 @@ internal sealed class Nes : IComputer
 	internal readonly byte[] Vram = new byte[0x800];
 	internal readonly byte[] PaletteRam = new byte[0x20];
 
-	public IMemoryBus CpuBus { get; }
+	public override CpuBus CpuBus { get; }
 
-	public IMemoryBus PpuBus { get; }
+	public PpuBus PpuBus { get; }
 
 	internal readonly Controllers Controllers = new();
 	internal readonly Cartridge Cartridge;

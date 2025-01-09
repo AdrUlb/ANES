@@ -1,8 +1,8 @@
 namespace ANES;
 
-internal sealed class CpuBus(Nes nes) : IMemoryBus
+internal sealed class CpuBus(Nes nes) : MemoryBus
 {
-	public byte ReadByte(ushort address, bool suppressSideEffects = false)
+	public override byte ReadByte(ushort address, bool suppressSideEffects = false)
 	{
 		var value = nes.Cartridge.CpuReadByte(address, suppressSideEffects);
 
@@ -21,7 +21,7 @@ internal sealed class CpuBus(Nes nes) : IMemoryBus
 		return value;
 	}
 
-	public void WriteByte(ushort address, byte value)
+	public override void WriteByte(ushort address, byte value)
 	{
 		nes.Cartridge.CpuWriteByte(address, value);
 

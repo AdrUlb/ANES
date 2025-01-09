@@ -9,6 +9,7 @@ namespace ANES;
 // https://www.nesdev.org/wiki/PPU_registers
 // https://www.nesdev.org/wiki/PPU_scrolling
 // https://www.nesdev.org/wiki/PPU_sprite_evaluation
+// https://www.nesdev.org/w/images/default/4/4f/Ppu.svg
 
 internal sealed class Ppu(Nes nes)
 {
@@ -36,6 +37,8 @@ internal sealed class Ppu(Nes nes)
 	private bool _maskEmphasizeGreen; // TODO // NOTE: Red on PAL/Dendy
 	private bool _maskEmphasizeBlue; // TODO
 
+	private byte _dataReadBuffer = 0;
+	
 	private bool _oddFrame = false;
 	private int _scanline = 261;
 	private int _cycle = 0;
@@ -56,7 +59,7 @@ internal sealed class Ppu(Nes nes)
 	private ushort _bgPatternLowShifter;
 	private ushort _bgPatternHighShifter;
 
-	private readonly byte[] _palette = File.ReadAllBytes("Palette.pal");
+	private readonly byte[] _palette = File.ReadAllBytes("Composite_wiki.pal");
 
 	internal readonly Color[] Picture = new Color[PictureWidth * PictureHeight];
 	private int _pictureIndex = 0;
@@ -86,7 +89,8 @@ internal sealed class Ppu(Nes nes)
 				// Note that while the v register has 15 bits, the PPU memory space is only 14 bits wide. The highest bit is unused for access through $2007.
 				// TODO: During rendering (on the pre-render line and the visible lines 0-239, provided either background or sprite rendering is enabled),
 				//	it will update v in an odd way, triggering a coarse X increment and a Y increment simultaneously (with normal wrapping behavior).
-				ret = nes.PpuBus.ReadByte((ushort)(_regV & 0b11_1111_1111_1111));
+				ret = _dataReadBuffer;
+				_dataReadBuffer = nes.PpuBus.ReadByte((ushort)(_regV & 0b11_1111_1111_1111));
 				if (!suppressSideEffects)
 				{
 					if (_ctrlVramIncrement32)
@@ -218,6 +222,7 @@ internal sealed class Ppu(Nes nes)
 		return true;
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private void DoCycle()
 	{
 		// Vblank flag is set on scanline 241, cycle 1
@@ -239,7 +244,7 @@ internal sealed class Ppu(Nes nes)
 		if (_cycle is (>= 1 and <= 256) or >= 321 && IsRenderingEnabled)
 		{
 			if (_scanline != 261 && _cycle is >= 1 and <= 256)
-				DrawDot();
+				OutputDot();
 
 			if (_cycle <= 336)
 			{
@@ -313,9 +318,8 @@ internal sealed class Ppu(Nes nes)
 
 						_bgPatternLowShifter |= _bgPatternLowFetch;
 						_bgPatternHighShifter |= _bgPatternHighFetch;
-						
-						IncrementCoarseX();
 
+						IncrementCoarseX();
 					}
 					break;
 			}
@@ -357,7 +361,8 @@ internal sealed class Ppu(Nes nes)
 		}
 	}
 
-	private void DrawDot()
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private void OutputDot()
 	{
 		var patternLow = (_bgPatternLowShifter >> (16 - 1 - _regX)) & 1;
 		var patternHigh = (_bgPatternHighShifter >> (16 - 1 - _regX)) & 1;
@@ -366,7 +371,7 @@ internal sealed class Ppu(Nes nes)
 
 		var attribute = (_bgAttributeShifter >> 2) & 0b11;
 
-		var paletteIndex = pattern switch
+		int paletteIndex = pattern switch
 		{
 			0 => nes.PpuBus.ReadByte(0x3F00),
 			1 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * attribute + 1))),
@@ -375,9 +380,13 @@ internal sealed class Ppu(Nes nes)
 			_ => throw new UnreachableException()
 		};
 
+		paletteIndex += 0x40 * App.Test;
+		paletteIndex %= _palette.Length / 3;
+
 		Picture[_pictureIndex++] = Color.FromArgb(_palette[paletteIndex * 3 + 0], _palette[paletteIndex * 3 + 1], _palette[paletteIndex * 3 + 2]);
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private void IncrementCoarseX()
 	{
 		// The coarse X component of v needs to be incremented when the next tile is reached. Bits 0-4 are incremented, with overflow toggling bit 10.
@@ -391,6 +400,7 @@ internal sealed class Ppu(Nes nes)
 			_regV++; // increment coarse X
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private void IncrementY()
 	{
 		if ((_regV & 0x7000) != 0x7000) // If fine Y < 7

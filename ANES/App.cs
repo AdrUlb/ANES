@@ -24,7 +24,7 @@ internal readonly struct MainDisplay
 	{
 		_nes = nes;
 		(_window, _renderer) = SdlWindow.CreateWithRenderer(
-			"Adrian's NES Emulator",
+			"ANES",
 			_screenWidth * _scale,
 			_screenHeight * _scale,
 			SdlWindowFlags.Resizable
@@ -73,6 +73,8 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 	private MainDisplay _mainDisplay;
 
 	private int _windowCount = 0;
+
+	public static int Test = 0;
 
 	protected override SdlAppResult Init()
 	{
@@ -123,6 +125,9 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 						break;
 					case SdlScancode.Right:
 						_nes.Controllers.Controller1.ButtonRight = true;
+						break;
+					case SdlScancode.Space:
+						Test++;
 						break;
 				}
 				break;

@@ -44,7 +44,7 @@ public class SdlSurface
 		_handle = handle;
 	}
 
-	public unsafe Span<T> GetPixels<T>(int row) where T : unmanaged => new(Data->Pixels + (row * Pitch), Pitch);
+	public unsafe Span<T> GetPixels<T>(int row) where T : unmanaged => new(Data->Pixels + (row * Pitch), Pitch / sizeof(T));
 
 	public static SdlSurface Create(int width, int height, SdlPixelFormat format) => new(SDL_CreateSurface(width, height, format));
 	public void Destroy() => SDL_DestroySurface(_handle);

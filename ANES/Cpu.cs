@@ -3,7 +3,7 @@ using System.Text;
 
 namespace ANES;
 
-internal sealed class Cpu(IComputer computer)
+internal sealed class Cpu(Computer computer)
 {
 	private static readonly IReadOnlyList<CpuOperation> _operationsByOpcode =
 	[
