@@ -12,7 +12,7 @@ public struct SdlSurfaceData
 	public readonly int W; // The width of the surface.
 	public readonly int H; // The height of the surface.
 	public readonly int Pitch; // The distance in bytes between rows of pixels
-	public unsafe void* Pixels; // A pointer to the pixels of the surface, the pixels are writeable if non-NULL
+	public unsafe byte* Pixels; // A pointer to the pixels of the surface, the pixels are writeable if non-NULL
 
 	private int _refcount; // Application reference count, used when freeing surface
 	private nint _reserved; // Reserved for internal use
@@ -44,7 +44,7 @@ public class SdlSurface
 		_handle = handle;
 	}
 
-	public unsafe Span<T> GetPixels<T>() where T : unmanaged => new(Data->Pixels, Pitch * Height / sizeof(T));
+	public unsafe Span<T> GetPixels<T>(int row) where T : unmanaged => new(Data->Pixels + (row * Pitch), Pitch);
 
 	public static SdlSurface Create(int width, int height, SdlPixelFormat format) => new(SDL_CreateSurface(width, height, format));
 	public void Destroy() => SDL_DestroySurface(_handle);

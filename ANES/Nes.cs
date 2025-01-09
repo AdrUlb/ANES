@@ -26,7 +26,7 @@ internal sealed class Nes : IComputer
 		_thread = new(ThreadProc);
 		CpuBus = new CpuBus(this);
 		PpuBus = new PpuBus(this);
-		Cartridge = new(this, "/home/adrian/roms/nes/smb1.nes");
+		Cartridge = new(this, "/home/adrian/roms/nes/donkeykong.nes");
 		Ppu = new(this);
 		_cpu = new(this);
 		_cpu.Reset();

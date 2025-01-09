@@ -52,7 +52,7 @@ internal sealed class Ppu(Nes nes)
 	private byte _bgPatternLowFetch;
 	private byte _bgPatternHighFetch;
 
-	private byte _bgAttribute;
+	private ushort _bgAttributeShifter;
 	private ushort _bgPatternLowShifter;
 	private ushort _bgPatternHighShifter;
 
@@ -71,7 +71,8 @@ internal sealed class Ppu(Nes nes)
 		{
 			case 2: // PPUSTATUS
 				// TODO: PPU OPEN BUS
-				_regW = false;
+				if (!suppressSideEffects)
+					_regW = false;
 				ret = (byte)(
 					(_statusVblank ? 1 << 7 : 0) |
 					(_statusSprite0 ? 1 << 6 : 0) |
@@ -86,10 +87,13 @@ internal sealed class Ppu(Nes nes)
 				// TODO: During rendering (on the pre-render line and the visible lines 0-239, provided either background or sprite rendering is enabled),
 				//	it will update v in an odd way, triggering a coarse X increment and a Y increment simultaneously (with normal wrapping behavior).
 				ret = nes.PpuBus.ReadByte((ushort)(_regV & 0b11_1111_1111_1111));
-				if (_ctrlVramIncrement32)
-					_regV += 32;
-				else
-					_regV++;
+				if (!suppressSideEffects)
+				{
+					if (_ctrlVramIncrement32)
+						_regV += 32;
+					else
+						_regV++;
+				}
 				break;
 		}
 
@@ -187,107 +191,12 @@ internal sealed class Ppu(Nes nes)
 
 	public void Tick()
 	{
-		switch (_scanline)
-		{
-			case < 240 or 261: // Scanlines 0-239 and 261 (visible scanlines and pre-render line)
-				{
-					if (_cycle is (>= 1 and <= 256) or >= 321 && IsRenderingEnabled)
-					{
-						FetchBackground();
-						_bgPatternLowShifter <<= 1;
-						_bgPatternHighShifter <<= 1;
-
-						if (((_cycle - 1) % 8) == 0)
-						{
-							// On every 8th dot in these background fetch regions (the same dot on which the coarse x component of v is incremented),
-							// the pattern and attributes data are transferred into registers used for producing pixel data.
-							// For the pattern data, these transfers are into the high 8 bits of two 16-bit shift registers.
-							// For the attributes data, only 2 bits are transferred and into two 1-bit latches that feed 8-bit shift registers.
-							// The concept for both is the same, differing merely because the attributes data is the same for all 8 pixels, negating the need to store 8 copies of it.
-
-							var coarseX = _regV & 0b11111;
-							var coarseY = (_regV >> 5) & 0b11111;
-
-							_bgAttribute = _bgAttributeFetch;
-							if (coarseX % 4 != 0)
-								_bgAttribute >>= 2;
-							if (coarseY % 4 != 0)
-								_bgAttribute >>= 4;
-							_bgAttribute &= 0b11;
-
-							_bgPatternLowShifter |= _bgPatternLowFetch;
-							_bgPatternHighShifter |= _bgPatternHighFetch;
-
-
-						}
-
-						// Between dot 328 of a scanline, and 256 of the next scanline
-						// If rendering is enabled, the PPU increments the horizontal position in v many times across the scanline, it begins at dots 328 and 336,
-						// and will continue through the next scanline at 8, 16, 24... 240, 248, 256 (every 8 dots across the scanline until 256).
-						// Across the scanline the effective coarse X scroll coordinate is incremented repeatedly, which will also wrap to the next nametable appropriately.
-						if (_cycle is (>= 8 and <= 256) or >= 321 && (_cycle % 8) == 0 && IsRenderingEnabled)
-							IncrementCoarseX();
-
-						if (_scanline != 261 && _cycle is >= 1 and <= 256)
-							DrawDot();
-					}
-
-					// At dot 256 of each scanline_pictureIndex
-					// If rendering is enabled, the PPU increments the vertical position in v.
-					// The effective Y scroll coordinate is incremented, which is a complex operation that will correctly skip the attribute table memory regions,
-					// and wrap to the next nametable appropriately.
-					if (_cycle == 256 && IsRenderingEnabled)
-						IncrementY();
-
-					// At dot 257 of each scanline
-					// If rendering is enabled, the PPU copies all bits related to horizontal position from t to v
-					if (_cycle == 257 && IsRenderingEnabled)
-					{
-						// v: ....A.. ...BCDEF <- t: ....A.. ...BCDEF
-						_regV &= 0b111_1011_1110_0000;
-						_regV |= (ushort)(_regT & 0b000_0100_0001_1111);
-					}
-
-					if (_scanline == 261)
-					{
-						if (_cycle == 1)
-						{
-							_statusVblank = false;
-							_statusSpriteOverflow = false;
-							_statusSprite0 = false;
-						}
-
-						// If rendering is enabled, at the end of vblank, shortly after the horizontal bits are copied from t to v at dot 257,
-						// the PPU will repeatedly copy the vertical bits from t to v from dots 280 to 304, completing the full initialization of v from t
-						if (_cycle is >= 280 and <= 304 && IsRenderingEnabled)
-						{
-							// v: GHIA.BC DEF..... <- t: GHIA.BC DEF.....
-							_regV &= 0b000_0100_0001_1111;
-							_regV |= (ushort)(_regT & 0b111_1011_1110_0000);
-						}
-					}
-
-					break;
-				}
-			case 241: // Scanline 241
-				{
-					if (_cycle == 1)
-					{
-						// Set Vblank flag
-						_statusVblank = true;
-
-						if (_ctrlVblankNmiEnable)
-							_raiseNmi = true;
-					}
-					break;
-				}
-		}
+		DoCycle();
 
 		_cycle++;
 		// Skip one dot on odd frames
 		if (_cycle > 340 || (_scanline == 261 && _oddFrame && _cycle >= 340))
 		{
-			_oddFrame = !_oddFrame;
 			_cycle = 0;
 			_scanline++;
 
@@ -295,6 +204,7 @@ internal sealed class Ppu(Nes nes)
 			{
 				_scanline = 0;
 				_pictureIndex = 0;
+				_oddFrame = !_oddFrame;
 			}
 		}
 	}
@@ -308,61 +218,158 @@ internal sealed class Ppu(Nes nes)
 		return true;
 	}
 
-	private void FetchBackground()
+	private void DoCycle()
 	{
-		var fetchStep = (_cycle - 1) % 8;
-
-		// https://www.nesdev.org/wiki/PPU_scrolling#Tile_and_attribute_fetching
-		// The data for each tile is fetched during this phase. Each memory access takes 2 PPU cycles to complete, and 4 must be performed per tile
-		// The data fetched from these accesses is placed into internal latches, and then fed to the appropriate shift registers when it's time to do so (every 8 cycles).
-		// Because the PPU can only fetch an attribute byte every 8 cycles, each sequential string of 8 pixels is forced to have the same palette attribute.
-		switch (fetchStep)
+		// Vblank flag is set on scanline 241, cycle 1
+		if (_scanline == 241 && _cycle == 1)
 		{
-			// TODO: actually do this "properly"
-			case 0: // Nametable byte
-				{
-					var addr = (ushort)(0x2000 | (_regV & 0x0FFF));
-					_bgTileFetch = nes.PpuBus.ReadByte(addr);
-					break;
-				}
-			case 2: // Attribute table byte
-				{
-					var addr = (ushort)(0x23C0 | (_regV & 0x0C00) | ((_regV >> 4) & 0x38) | ((_regV >> 2) & 0x07));
-					_bgAttributeFetch = nes.PpuBus.ReadByte(addr);
-					break;
-				}
-			case 4: // Pattern table tile low
-				{
-					var half = _ctrlBackgroundPatternTable ? 1 : 0;
-					var fineY = (_regV >> 12) & 0b111;
-					var addr = (ushort)((half << 12) | (_bgTileFetch << 4) | fineY);
-					_bgPatternLowFetch = nes.PpuBus.ReadByte(addr);
-					break;
-				}
-			case 6: // Pattern table tile high
-				{
-					var half = _ctrlBackgroundPatternTable ? 1 : 0;
-					var fineY = (_regV >> 12) & 0b111;
-					var addr = (ushort)((half << 12) | (_bgTileFetch << 4) | fineY);
-					_bgPatternHighFetch = nes.PpuBus.ReadByte((ushort)(addr + 8));
-					break;
-				}
+			// Set Vblank flag
+			_statusVblank = true;
+
+			if (_ctrlVblankNmiEnable)
+				_raiseNmi = true;
+
+			return;
 		}
 
-		// TODO: (https://www.nesdev.org/wiki/PPU_rendering#Cycles_257-320)
+		// No work is done between scanlines 240 and 260
+		if (_scanline is >= 240 and <= 260)
+			return;
+
+		if (_cycle is (>= 1 and <= 256) or >= 321 && IsRenderingEnabled)
+		{
+			if (_scanline != 261 && _cycle is >= 1 and <= 256)
+				DrawDot();
+
+			if (_cycle <= 336)
+			{
+				_bgPatternLowShifter <<= 1;
+				_bgPatternHighShifter <<= 1;
+			}
+
+			// https://www.nesdev.org/wiki/PPU_scrolling#Tile_and_attribute_fetching
+			// The data for each tile is fetched during this phase. Each memory access takes 2 PPU cycles to complete, and 4 must be performed per tile
+			// The data fetched from these accesses is placed into internal latches, and then fed to the appropriate shift registers when it's time to do so (every 8 cycles).
+			// Because the PPU can only fetch an attribute byte every 8 cycles, each sequential string of 8 pixels is forced to have the same palette attribute.
+			var fetchStep = (_cycle - 1) % 8;
+			switch (fetchStep)
+			{
+				// TODO: actually do this "properly"
+				case 0: // Nametable byte
+					{
+						var addr = (ushort)(0x2000 | (_regV & 0x0FFF));
+						_bgTileFetch = nes.PpuBus.ReadByte(addr);
+						break;
+					}
+				case 2: // Attribute table byte
+					{
+						var nametable = (_regV >> 10 & 0b11);
+						var coarseX = _regV & 0b11111;
+						var coarseY = (_regV >> 5) & 0b11111;
+						var coarseXHigh3 = coarseX >> 2;
+						var coarseYHigh3 = coarseY >> 2;
+						var addr = (ushort)(0x23C0 | (nametable << 10) | (coarseYHigh3 << 3) | coarseXHigh3);
+						_bgAttributeFetch = nes.PpuBus.ReadByte(addr);
+						break;
+					}
+				case 4: // Pattern table tile low
+					{
+						var half = _ctrlBackgroundPatternTable ? 1 : 0;
+						var fineY = (_regV >> 12) & 0b111;
+						var addr = (ushort)((half << 12) | (_bgTileFetch << 4) | fineY);
+						_bgPatternLowFetch = nes.PpuBus.ReadByte(addr);
+						break;
+					}
+				case 6: // Pattern table tile high
+					{
+						var half = _ctrlBackgroundPatternTable ? 1 : 0;
+						var fineY = (_regV >> 12) & 0b111;
+						var addr = (ushort)((half << 12) | (_bgTileFetch << 4) | fineY);
+						_bgPatternHighFetch = nes.PpuBus.ReadByte((ushort)(addr + 8));
+						break;
+					}
+				case 7:
+					{
+						IncrementCoarseX();
+
+						// On every 8th dot in these background fetch regions (the same dot on which the coarse x component of v is incremented),
+						// the pattern and attributes data are transferred into registers used for producing pixel data.
+						// For the pattern data, these transfers are into the high 8 bits of two 16-bit shift registers.
+						// For the attributes data, only 2 bits are transferred and into two 1-bit latches that feed 8-bit shift registers.
+						// The concept for both is the same, differing merely because the attributes data is the same for all 8 pixels, negating the need to store 8 copies of it.
+						var coarseX = _regV & 0b11111;
+						var coarseY = (_regV >> 5) & 0b11111;
+
+
+						/*var attribute = _bgAttributeFetch;
+						if (((coarseX >> 1) & 1) != 0)
+							attribute >>= 2;
+						if (((coarseY >> 1) & 1) != 0)
+							attribute >>= 4;*/
+						//attribute &= 0b11;
+						var attribute = ((coarseX >> 1) & 1, (coarseY >> 1) & 1) switch
+						{
+							(0, 0) => (_bgAttributeFetch >> 0) & 0b11,
+							(1, 0) => (_bgAttributeFetch >> 2) & 0b11,
+							(0, 1) => (_bgAttributeFetch >> 4) & 0b11,
+							(1, 1) => (_bgAttributeFetch >> 6) & 0b11,
+							_ => throw new UnreachableException()
+						};
+
+						_bgAttributeShifter <<= 2;
+						_bgAttributeShifter |= (ushort)attribute;
+
+						_bgPatternLowShifter |= _bgPatternLowFetch;
+						_bgPatternHighShifter |= _bgPatternHighFetch;
+					}
+					break;
+			}
+		}
+
+		// At dot 256 of each scanline
+		// If rendering is enabled, the PPU increments the vertical position in v.
+		// The effective Y scroll coordinate is incremented, which is a complex operation that will correctly skip the attribute table memory regions,
+		// and wrap to the next nametable appropriately.
+		if (_cycle == 256 && IsRenderingEnabled)
+			IncrementY();
+
+		// At dot 257 of each scanline
+		// If rendering is enabled, the PPU copies all bits related to horizontal position from t to v
+		if (_cycle == 257 && IsRenderingEnabled)
+		{
+			// v: ....A.. ...BCDEF <- t: ....A.. ...BCDEF
+			_regV &= 0b111_1011_1110_0000;
+			_regV |= (ushort)(_regT & 0b000_0100_0001_1111);
+		}
+
+		if (_scanline == 261)
+		{
+			if (_cycle == 1)
+			{
+				_statusVblank = false;
+				_statusSpriteOverflow = false;
+				_statusSprite0 = false;
+			}
+
+			// If rendering is enabled, at the end of vblank, shortly after the horizontal bits are copied from t to v at dot 257,
+			// the PPU will repeatedly copy the vertical bits from t to v from dots 280 to 304, completing the full initialization of v from t
+			if (_cycle is >= 280 and <= 304 && IsRenderingEnabled)
+			{
+				// v: GHIA.BC DEF..... <- t: GHIA.BC DEF.....
+				_regV &= 0b000_0100_0001_1111;
+				_regV |= (ushort)(_regT & 0b111_1011_1110_0000);
+			}
+		}
 	}
 
 	private void DrawDot()
 	{
-		var attribute = _bgAttribute;
-
 		var patternLow = (_bgPatternLowShifter >> (16 - 1 - _regX)) & 1;
 		var patternHigh = (_bgPatternHighShifter >> (16 - 1 - _regX)) & 1;
 
 		var pattern = (patternHigh << 1) | patternLow;
 
-		//var index = (_cycle - 1) + _scanline * PictureWidth;
-		var index = _pictureIndex++;
+		var attribute = (_bgAttributeShifter >> 2) & 0b11;
 
 		var paletteIndex = pattern switch
 		{
@@ -373,7 +380,7 @@ internal sealed class Ppu(Nes nes)
 			_ => throw new UnreachableException()
 		};
 
-		Picture[index] = Color.FromArgb(_palette[paletteIndex * 3 + 0], _palette[paletteIndex * 3 + 1], _palette[paletteIndex * 3 + 2]);
+		Picture[_pictureIndex++] = Color.FromArgb(_palette[paletteIndex * 3 + 0], _palette[paletteIndex * 3 + 1], _palette[paletteIndex * 3 + 2]);
 	}
 
 	private void IncrementCoarseX()

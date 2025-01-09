@@ -23,7 +23,7 @@ internal readonly struct MainDisplay
 	{
 		_nes = nes;
 		(_window, _renderer) = SdlWindow.CreateWithRenderer(
-			"ANES: Adrian's NES Emulator",
+			"Adrian's NES Emulator",
 			_screenWidth * _scale,
 			_screenHeight * _scale,
 			SdlWindowFlags.Resizable
@@ -43,13 +43,12 @@ internal readonly struct MainDisplay
 	{
 		var surface = _texture.LockToSurface();
 
-		if (surface.Format != SdlPixelFormat.Argb8888)
-			throw new UnreachableException();
-
-		var pixels = surface.GetPixels<int>();
 		for (var y = 0; y < _screenHeight; y++)
-		for (var x = 0; x < _screenWidth; x++)
-			pixels[x + y * surface.Pitch / 4] = _nes.Ppu.Picture[x + y * Ppu.PictureWidth].ToArgb();
+		{
+			var row = surface.GetPixels<int>(y);
+			for (var x = 0; x < _screenWidth; x++)
+				row[x] = _nes.Ppu.Picture[x + (y + 8) * Ppu.PictureWidth].ToArgb();
+		}
 
 		_renderer.Clear();
 		_texture.Unlock();
