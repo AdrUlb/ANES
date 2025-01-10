@@ -51,6 +51,16 @@
 		<DirectPInvoke Include="SDL3" Visible="false" />
 		<NativeLibrary Include="..\NativeLibs\linux-x64\libSDL3.a" Condition="'$(RuntimeIdentifier)'=='linux-x64'" Visible="false" />
 	</ItemGroup>
+	
+	<ItemGroup Condition="'$(RuntimeIdentifier)'=='win-x64'">
+		<NativeLibrary Include="..\NativeLibs\win-x64\SDL3-3.1.8\SDL3-static.lib" Visible="false" />
+		<NativeLibrary Include="gdi32.lib" Visible="false" />
+		<NativeLibrary Include="imm32.lib" Visible="false" />
+		<NativeLibrary Include="setupapi.lib" Visible="false" />
+		<NativeLibrary Include="shell32.lib" Visible="false" />
+		<NativeLibrary Include="winmm.lib" Visible="false" />
+	</ItemGroup>
+
 
 	<ItemGroup>
 		<None Update="Tests/**">
