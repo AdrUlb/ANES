@@ -38,7 +38,7 @@ internal sealed class Ppu(Nes nes)
 	private bool _maskEmphasizeBlue; // TODO
 
 	private byte _dataReadBuffer = 0;
-	
+
 	private bool _oddFrame = false;
 	private int _scanline = 261;
 	private int _cycle = 0;
@@ -55,12 +55,13 @@ internal sealed class Ppu(Nes nes)
 	private byte _bgPatternLowFetch;
 	private byte _bgPatternHighFetch;
 
-	private ushort _bgAttributeShifter;
+	private ushort _bgPaletteShifter;
 	private ushort _bgPatternLowShifter;
 	private ushort _bgPatternHighShifter;
 
 	private readonly byte[] _palette = File.ReadAllBytes("Composite_wiki.pal");
 
+	internal readonly byte[] Oam = new byte[256];
 	internal readonly Color[] Picture = new Color[PictureWidth * PictureHeight];
 	private int _pictureIndex = 0;
 
@@ -73,7 +74,7 @@ internal sealed class Ppu(Nes nes)
 		switch (index)
 		{
 			case 2: // PPUSTATUS
-				// TODO: PPU OPEN BUS
+					// TODO: PPU OPEN BUS
 				if (!suppressSideEffects)
 					_regW = false;
 				ret = (byte)(
@@ -83,12 +84,12 @@ internal sealed class Ppu(Nes nes)
 				);
 				break;
 			case 4: // OAMDATA
-				// TODO
+					// TODO
 				break;
 			case 7: // PPUDATA
-				// Note that while the v register has 15 bits, the PPU memory space is only 14 bits wide. The highest bit is unused for access through $2007.
-				// TODO: During rendering (on the pre-render line and the visible lines 0-239, provided either background or sprite rendering is enabled),
-				//	it will update v in an odd way, triggering a coarse X increment and a Y increment simultaneously (with normal wrapping behavior).
+					// Note that while the v register has 15 bits, the PPU memory space is only 14 bits wide. The highest bit is unused for access through $2007.
+					// TODO: During rendering (on the pre-render line and the visible lines 0-239, provided either background or sprite rendering is enabled),
+					//	it will update v in an odd way, triggering a coarse X increment and a Y increment simultaneously (with normal wrapping behavior).
 				ret = _dataReadBuffer;
 				_dataReadBuffer = nes.PpuBus.ReadByte((ushort)(_regV & 0b11_1111_1111_1111));
 				if (!suppressSideEffects)
@@ -136,10 +137,10 @@ internal sealed class Ppu(Nes nes)
 				// TODO
 				break;
 			case 3: // OAMADDR
-				// TODO
+					// TODO
 				break;
 			case 4: // OAMDATA
-				// TODO
+					// TODO
 				break;
 			case 5: // PPUSCROLL
 				if (!_regW)
@@ -180,10 +181,10 @@ internal sealed class Ppu(Nes nes)
 				_regW = !_regW;
 				break;
 			case 7: // PPUDATA
-				// Note that while the v register has 15 bits, the PPU memory space is only 14 bits wide. The highest bit is unused for access through $2007.
-				// TODO: During rendering (on the pre-render line and the visible lines 0-239, provided either background or sprite rendering is enabled),
-				//	it will update v in an odd way, triggering a coarse X increment and a Y increment simultaneously (with normal wrapping behavior).
-				//	see: https://www.nesdev.org/wiki/PPU_scrolling#$2007_(PPUDATA)_reads_and_writes
+					// Note that while the v register has 15 bits, the PPU memory space is only 14 bits wide. The highest bit is unused for access through $2007.
+					// TODO: During rendering (on the pre-render line and the visible lines 0-239, provided either background or sprite rendering is enabled),
+					//	it will update v in an odd way, triggering a coarse X increment and a Y increment simultaneously (with normal wrapping behavior).
+					//	see: https://www.nesdev.org/wiki/PPU_scrolling#$2007_(PPUDATA)_reads_and_writes
 				nes.PpuBus.WriteByte((ushort)(_regV & 0b11_1111_1111_1111), value);
 				if (_ctrlVramIncrement32)
 					_regV += 32;
@@ -228,6 +229,9 @@ internal sealed class Ppu(Nes nes)
 		// Vblank flag is set on scanline 241, cycle 1
 		if (_scanline == 241 && _cycle == 1)
 		{
+			// TODO: THIS IS A HACK
+			DrawSprites();
+
 			// Set Vblank flag
 			_statusVblank = true;
 
@@ -313,8 +317,8 @@ internal sealed class Ppu(Nes nes)
 							_ => throw new UnreachableException()
 						};
 
-						_bgAttributeShifter <<= 2;
-						_bgAttributeShifter |= (ushort)attribute;
+						_bgPaletteShifter <<= 2;
+						_bgPaletteShifter |= (ushort)attribute;
 
 						_bgPatternLowShifter |= _bgPatternLowFetch;
 						_bgPatternHighShifter |= _bgPatternHighFetch;
@@ -369,14 +373,14 @@ internal sealed class Ppu(Nes nes)
 
 		var pattern = (patternHigh << 1) | patternLow;
 
-		var attribute = (_bgAttributeShifter >> 2) & 0b11;
+		var palette = (_bgPaletteShifter >> 2) & 0b11;
 
 		int paletteIndex = pattern switch
 		{
 			0 => nes.PpuBus.ReadByte(0x3F00),
-			1 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * attribute + 1))),
-			2 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * attribute + 2))),
-			3 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * attribute + 3))),
+			1 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * palette + 1))),
+			2 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * palette + 2))),
+			3 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * palette + 3))),
 			_ => throw new UnreachableException()
 		};
 
@@ -384,6 +388,70 @@ internal sealed class Ppu(Nes nes)
 		paletteIndex %= _palette.Length / 3;
 
 		Picture[_pictureIndex++] = Color.FromArgb(_palette[paletteIndex * 3 + 0], _palette[paletteIndex * 3 + 1], _palette[paletteIndex * 3 + 2]);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private void DrawSprites()
+	{
+		for (var i = 0; i < 64; i++)
+		{
+			var x = Oam[i * 4 + 3];
+			var y = Oam[i * 4 + 0] + 1;
+
+			var index = Oam[i * 4 + 1];
+
+			var attribute = Oam[i * 4 + 2];
+			var palette = attribute & 0b11;
+			var behindBackground = ((attribute >> 5) & 1) != 0;
+			var flipX = ((attribute >> 6) & 1) != 0;
+			var flipY = ((attribute >> 7) & 1) != 0;
+
+			var patternHalf = _ctrlSpritePatternTable ? 1 : 0;
+
+			for (var tileY = 0; tileY < 8; tileY++)
+			{
+				var yy = y + tileY;
+
+				if (yy >= PictureHeight)
+					break;
+
+				var fineY = (flipY ? (7 - tileY) : tileY) % 8;
+				var patternAddr = (ushort)((patternHalf << 12) | (index << 4) | fineY);
+				var patternLow = nes.PpuBus.ReadByte(patternAddr);
+				var patternHigh = nes.PpuBus.ReadByte((ushort)(patternAddr + 8));
+
+
+				for (var tileX = 0; tileX < 8; tileX++)
+				{
+					var xx = x + tileX;
+
+					if (xx >= PictureWidth)
+						break;
+
+					var pictureIndex = xx + yy * PictureWidth;
+
+					var shift = flipX ? tileX : (7 - tileX);
+					var pattern = (((patternHigh >> shift) & 1) << 1) | ((patternLow >> shift) & 1);
+
+					if (pattern == 0)
+						continue;
+
+					int paletteIndex = pattern switch
+					{
+						0 => nes.PpuBus.ReadByte(0x3F10),
+						1 => nes.PpuBus.ReadByte((ushort)(0x3F10 | (4 * palette + 1))),
+						2 => nes.PpuBus.ReadByte((ushort)(0x3F10 | (4 * palette + 2))),
+						3 => nes.PpuBus.ReadByte((ushort)(0x3F10 | (4 * palette + 3))),
+						_ => throw new UnreachableException()
+					};
+
+					paletteIndex += 0x40 * App.Test;
+					paletteIndex %= _palette.Length / 3;
+
+					Picture[pictureIndex] = Color.FromArgb(_palette[paletteIndex * 3 + 0], _palette[paletteIndex * 3 + 1], _palette[paletteIndex * 3 + 2]);
+				}
+			}
+		}
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

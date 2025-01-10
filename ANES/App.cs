@@ -4,25 +4,36 @@ using System.Drawing;
 
 namespace ANES;
 
-internal readonly struct MainDisplay
+public sealed class App() : SdlApp(SdlInitFlags.Video)
 {
 	private const int _scale = 3;
 	private const bool _palResolution = true;
 
 	private const int _screenWidth = 256;
 	private const int _screenHeight = _palResolution ? 240 : 224;
+	private const int _screenOffsetTop = _palResolution ? 0 : 8;
 
-	private readonly Nes _nes;
+	private readonly Nes _nes = new();
+	private SdlWindow _window = null!;
+	private SdlRenderer _renderer = null!;
+	private SdlTexture _screen = null!;
 
-	private readonly SdlWindow _window;
-	private readonly SdlRenderer _renderer;
-	private readonly SdlTexture _texture;
+	private volatile bool _quit = false;
+	private volatile bool _waitingForVblank = true;
 
-	public MainDisplay() => throw new InvalidOperationException();
+	public static int Test = 0;
 
-	public MainDisplay(Nes nes)
+	private void VblankHandler(object? sender, EventArgs e)
 	{
-		_nes = nes;
+		_waitingForVblank = false;
+
+		/*bool WaitingForVblank() => _waitingForVblank || _quit;
+		SpinWait.SpinUntil(WaitingForVblank);*/
+		while (!_waitingForVblank && !_quit) { }
+	}
+
+	protected override SdlAppResult Init()
+	{
 		(_window, _renderer) = SdlWindow.CreateWithRenderer(
 			"ANES",
 			_screenWidth * _scale,
@@ -35,62 +46,40 @@ internal readonly struct MainDisplay
 		tilesTexProps.Set(SdlProperties.TextureCreateWidth, Ppu.PictureWidth);
 		tilesTexProps.Set(SdlProperties.TextureCreateHeight, Ppu.PictureHeight);
 		tilesTexProps.Set(SdlProperties.TextureCreateFormat, (long)SdlPixelFormat.Argb8888);
-		_texture = SdlTexture.CreateWithProperties(_renderer, tilesTexProps);
-		_texture.SetScaleMode(SdlScaleMode.Nearest);
+		_screen = SdlTexture.CreateWithProperties(_renderer, tilesTexProps);
+		_screen.SetScaleMode(SdlScaleMode.Nearest);
 		tilesTexProps.Destroy();
+
+		_nes.Vblank += VblankHandler;
+
+		_nes.Start();
+		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\donkeykong.nes");
+		_nes.Reset();
+
+		return SdlAppResult.Continue;
 	}
 
-	public void Iterate()
+	protected override SdlAppResult Iterate()
 	{
-		var surface = _texture.LockToSurface();
+		/*bool NotWaitingForVblank() => !_waitingForVblank || _quit;
+		SpinWait.SpinUntil(NotWaitingForVblank);*/
+		while (_waitingForVblank && !_quit) { }
 
+		var surface = _screen.LockToSurface();
 		for (var y = 0; y < Ppu.PictureHeight; y++)
 		{
 			var row = surface.GetPixels<int>(y);
 			for (var x = 0; x < _screenWidth; x++)
 				row[x] = _nes.Ppu.Picture[x + y * Ppu.PictureWidth].ToArgb();
 		}
+		_screen.Unlock();
+		_waitingForVblank = true;
+
+		var srcRect = new RectangleF(0, _screenOffsetTop, _screenWidth, _screenHeight);
 
 		_renderer.Clear();
-		_texture.Unlock();
-		var srcRect = new RectangleF(0, _palResolution ? 0 : 8, _screenWidth, _screenHeight);
-		_texture.Render(srcRect, RectangleF.Empty);
+		_screen.Render(srcRect, RectangleF.Empty);
 		_renderer.Present();
-	}
-
-	public void Destroy()
-	{
-		_texture.Destroy();
-		_renderer.Destroy();
-		_window.Destroy();
-	}
-}
-
-public sealed class App() : SdlApp(SdlInitFlags.Video)
-{
-	private readonly Nes _nes = new();
-
-	private MainDisplay _mainDisplay;
-
-	private int _windowCount = 0;
-
-	public static int Test = 0;
-
-	protected override SdlAppResult Init()
-	{
-		_mainDisplay = new(_nes);
-		_windowCount++;
-
-		_nes.Start();
-		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\donkeykong.nes");
-		_nes.Reset();
-
-        return SdlAppResult.Continue;
-	}
-
-	protected override SdlAppResult Iterate()
-	{
-		_mainDisplay.Iterate();
 
 		return SdlAppResult.Continue;
 	}
@@ -105,10 +94,10 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 				switch (sdlEvent.Key.Scancode)
 				{
 					case SdlScancode.A:
-						_nes.Controllers.Controller1.ButtonA = true;
+						_nes.Controllers.Controller1.ButtonB = true;
 						break;
 					case SdlScancode.S:
-						_nes.Controllers.Controller1.ButtonB = true;
+						_nes.Controllers.Controller1.ButtonA = true;
 						break;
 					case SdlScancode.RightShift:
 						_nes.Controllers.Controller1.ButtonSelect = true;
@@ -137,10 +126,10 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 				switch (sdlEvent.Key.Scancode)
 				{
 					case SdlScancode.A:
-						_nes.Controllers.Controller1.ButtonA = false;
+						_nes.Controllers.Controller1.ButtonB = false;
 						break;
 					case SdlScancode.S:
-						_nes.Controllers.Controller1.ButtonB = false;
+						_nes.Controllers.Controller1.ButtonA = false;
 						break;
 					case SdlScancode.RightShift:
 						_nes.Controllers.Controller1.ButtonSelect = false;
@@ -168,8 +157,13 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 
 	protected override void Quit(SdlAppResult result)
 	{
-		_nes.Stop();
+		_quit = true;
 
-		_mainDisplay.Destroy();
+		_nes.Stop();
+		_nes.Vblank -= VblankHandler;
+
+		_screen.Destroy();
+		_renderer.Destroy();
+		_window.Destroy();
 	}
 }

@@ -1,92 +1,108 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace ANES;
 
 internal sealed class Nes : Computer
 {
-    private readonly Thread _thread;
-    private readonly object _startStopLock = new();
-    private bool _keepRunning = false;
+	private readonly Thread _thread;
+	private readonly object _startStopLock = new();
+	private bool _keepRunning = false;
 
-    internal readonly byte[] Ram = new byte[0x800];
-    internal readonly byte[] Vram = new byte[0x800];
-    internal readonly byte[] PaletteRam = new byte[0x20];
+	internal readonly byte[] Ram = new byte[0x800];
+	internal readonly byte[] Vram = new byte[0x800];
+	internal readonly byte[] PaletteRam = new byte[0x20];
 
-    public override CpuBus CpuBus { get; }
+	public override CpuBus CpuBus { get; }
 
-    public PpuBus PpuBus { get; }
+	public PpuBus PpuBus { get; }
 
-    internal Cartridge? Cartridge = null;
-    internal readonly Controllers Controllers = new();
-    internal readonly Ppu Ppu;
-    private readonly Cpu _cpu;
+	internal Cartridge? Cartridge = null;
+	internal readonly Controllers Controllers = new();
+	internal readonly Ppu Ppu;
+	private readonly Cpu _cpu;
 
-    public Nes()
-    {
-        _thread = new(ThreadProc);
-        CpuBus = new CpuBus(this);
-        PpuBus = new PpuBus(this);
-        Ppu = new(this);
-        _cpu = new(this);
-    }
+	public event EventHandler? Vblank;
 
-    public void InsertCartridge(string romFilePath)
-    {
-        Cartridge = new(this, romFilePath);
-    }
+	public Nes()
+	{
+		_thread = new(ThreadProc);
+		CpuBus = new CpuBus(this);
+		PpuBus = new PpuBus(this);
+		Ppu = new(this);
+		_cpu = new(this);
+	}
 
-    private void ThreadProc()
-    {
-        ulong tick = 0;
-        var start = Stopwatch.StartNew();
+	public void InsertCartridge(string romFilePath)
+	{
+		Cartridge = new(this, romFilePath);
+	}
 
-        while (_keepRunning)
-        {
-            if (tick % 4 == 0)
-            {
-                Ppu.Tick();
+	internal void BeginOamDma(byte page)
+	{
+		// TODO: implement this properly
+		var address = (ushort)(page << 8);
+		for (var i = 0; i < Ppu.Oam.Length; i++)
+		{
+			var value = CpuBus.ReadByte(address);
+			Ppu.Oam[i] = value;
+			address++;
+		}
+	}
 
-                if (Ppu.HandleNmi())
-                    _cpu.RaiseNmi();
-            }
+	private void ThreadProc()
+	{
+		// Ticks = PPU dots
+		ulong tick = 0;
+		var start = Stopwatch.StartNew();
 
-            if (tick % 12 == 0)
-            {
-                _cpu.Tick();
-                // NOTE: signal IRQs AFTER CPU tick
-                // maybe NMIs before?
-            }
+		while (_keepRunning)
+		{
+			Ppu.Tick();
 
-            tick++;
-        }
-    }
+			if (Ppu.HandleNmi())
+			{
+				_cpu.RaiseNmi();
+				Vblank?.Invoke(this, EventArgs.Empty);
+			}
 
-    /// <summary>
-    /// Starts the emulation.
-    /// </summary>
-    public void Start()
-    {
-        lock (_startStopLock)
-        {
-            _keepRunning = true;
-            _thread.Start();
-        }
-    }
+			if (tick % 4 == 0)
+			{
+				_cpu.Tick();
+				// NOTE: signal IRQs AFTER CPU tick
+				// maybe NMIs before?
+			}
 
-    /// <summary>
-    /// Stops the emulation.
-    /// </summary>
-    public void Stop()
-    {
-        lock (_startStopLock)
-        {
-            _keepRunning = false;
-            SpinWait.SpinUntil(() => !_thread.IsAlive);
-        }
-    }
+			tick++;
+		}
+	}
 
-    public void Reset()
-    {
-        _cpu.Reset();
-    }
+	/// <summary>
+	/// Starts the emulation.
+	/// </summary>
+	public void Start()
+	{
+		lock (_startStopLock)
+		{
+			_keepRunning = true;
+			_thread.Start();
+		}
+	}
+
+	/// <summary>
+	/// Stops the emulation.
+	/// </summary>
+	public void Stop()
+	{
+		lock (_startStopLock)
+		{
+			_keepRunning = false;
+			SpinWait.SpinUntil(() => !_thread.IsAlive);
+		}
+	}
+
+	public void Reset()
+	{
+		_cpu.Reset();
+	}
 }

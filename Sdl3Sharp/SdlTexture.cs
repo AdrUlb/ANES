@@ -24,8 +24,8 @@ public class SdlTexture
 
 	public unsafe void Render(RectangleF sourceRect, RectangleF targetRect)
 	{
-		var srcrect = new SdlFRect { X = sourceRect.X, Y = sourceRect.Y, W = sourceRect.Width, H = sourceRect.Height };
-		var dstrect = new SdlFRect { X = targetRect.X, Y = targetRect.Y, W = targetRect.Width, H = targetRect.Height };
+		var srcrect = SdlFRect.FromRectangleF(sourceRect);
+		var dstrect = SdlFRect.FromRectangleF(targetRect);
 
 		var srcrectPtr = sourceRect != RectangleF.Empty ? &srcrect : null;
 		var dstrectPtr = targetRect != RectangleF.Empty ? &dstrect : null;

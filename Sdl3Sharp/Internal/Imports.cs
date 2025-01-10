@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using static System.Net.Mime.MediaTypeNames;
 using SDL_PropertiesID = uint;
 
 namespace Sdl3Sharp.Internal;
@@ -100,6 +101,10 @@ internal static partial class Imports
 
 	[LibraryImport(_libraryName)]
 	internal static partial void SDL_DestroySurface(nint surface);
+
+	[LibraryImport(_libraryName)]
+	[return: MarshalAs(UnmanagedType.U1)]
+	internal static unsafe partial bool SDL_BlitSurface(nint src, SdlRect* srcrect, nint dst, SdlRect* dstrect);
 
 	[LibraryImport(_libraryName)]
 	internal static partial SdlWindowId SDL_GetWindowID(nint window);

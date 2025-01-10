@@ -32,6 +32,7 @@ internal sealed class CpuBus(Nes nes) : MemoryBus
 			case < 0x1800: nes.Ram[address - 0x1000] = value; break;
 			case < 0x2000: nes.Ram[address - 0x1800] = value; break;
 			case < 0x4000: nes.Ppu.WriteReg((address - 0x2000) % 8, value); break;
+			case 0x4014: nes.BeginOamDma(value); break;
 			case 0x4016: nes.Controllers.WriteStrobe(value); break;
 		}
 	}

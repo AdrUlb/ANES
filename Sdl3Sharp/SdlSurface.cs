@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using static Sdl3Sharp.Internal.Imports;
@@ -20,12 +21,12 @@ public struct SdlSurfaceData
 
 public class SdlSurface
 {
-	private readonly nint _handle;
+	internal readonly nint Handle;
 
 	private unsafe SdlSurfaceData* Data
 	{
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		get => (SdlSurfaceData*)_handle;
+		get => (SdlSurfaceData*)Handle;
 	}
 
 	public unsafe int Width => Data->W;
@@ -41,11 +42,26 @@ public class SdlSurface
 		if (handle == 0)
 			throw new SdlErrorException();
 
-		_handle = handle;
+		Handle = handle;
 	}
 
 	public unsafe Span<T> GetPixels<T>(int row) where T : unmanaged => new(Data->Pixels + (row * Pitch), Pitch / sizeof(T));
 
+	public unsafe void Blit(Rectangle sourceRect, SdlSurface target, Rectangle targetRect)
+	{
+
+		var srcrect = SdlRect.FromRectangle(sourceRect);
+		var dstrect = SdlRect.FromRectangle(targetRect);
+
+		var srcrectPtr = sourceRect != Rectangle.Empty ? &srcrect : null;
+		var dstrectPtr = targetRect != Rectangle.Empty ? &dstrect : null;
+
+		if (!SDL_BlitSurface(Handle, srcrectPtr, target.Handle, dstrectPtr))
+			throw new SdlErrorException();
+	}
+
+	public void Blit(SdlSurface target) => Blit(Rectangle.Empty, target, Rectangle.Empty);
+
 	public static SdlSurface Create(int width, int height, SdlPixelFormat format) => new(SDL_CreateSurface(width, height, format));
-	public void Destroy() => SDL_DestroySurface(_handle);
+	public void Destroy() => SDL_DestroySurface(Handle);
 }
