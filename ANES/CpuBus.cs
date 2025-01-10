@@ -4,7 +4,7 @@ internal sealed class CpuBus(Nes nes) : MemoryBus
 {
 	public override byte ReadByte(ushort address, bool suppressSideEffects = false)
 	{
-		var value = nes.Cartridge.CpuReadByte(address, suppressSideEffects);
+		var value = nes.Cartridge?.CpuReadByte(address, suppressSideEffects) ?? 0xFF;
 
 		value &= address switch
 		{
@@ -23,7 +23,7 @@ internal sealed class CpuBus(Nes nes) : MemoryBus
 
 	public override void WriteByte(ushort address, byte value)
 	{
-		nes.Cartridge.CpuWriteByte(address, value);
+		nes.Cartridge?.CpuWriteByte(address, value);
 
 		switch (address)
 		{

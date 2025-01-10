@@ -4,86 +4,89 @@ namespace ANES;
 
 internal sealed class Nes : Computer
 {
-	private readonly Thread _thread;
-	private readonly object _startStopLock = new();
-	private bool _keepRunning = false;
+    private readonly Thread _thread;
+    private readonly object _startStopLock = new();
+    private bool _keepRunning = false;
 
-	internal readonly byte[] Ram = new byte[0x800];
-	internal readonly byte[] Vram = new byte[0x800];
-	internal readonly byte[] PaletteRam = new byte[0x20];
+    internal readonly byte[] Ram = new byte[0x800];
+    internal readonly byte[] Vram = new byte[0x800];
+    internal readonly byte[] PaletteRam = new byte[0x20];
 
-	public override CpuBus CpuBus { get; }
+    public override CpuBus CpuBus { get; }
 
-	public PpuBus PpuBus { get; }
+    public PpuBus PpuBus { get; }
 
-	internal readonly Controllers Controllers = new();
-	internal readonly Cartridge Cartridge;
-	internal readonly Ppu Ppu;
-	private readonly Cpu _cpu;
+    internal Cartridge? Cartridge = null;
+    internal readonly Controllers Controllers = new();
+    internal readonly Ppu Ppu;
+    private readonly Cpu _cpu;
 
-	public Nes()
-	{
-		_thread = new(ThreadProc);
-		CpuBus = new CpuBus(this);
-		PpuBus = new PpuBus(this);
-		Cartridge = new(this, @"C:\Stuff\Roms\nes\donkeykong.nes");
-		Ppu = new(this);
-		_cpu = new(this);
-		_cpu.Reset();
-	}
+    public Nes()
+    {
+        _thread = new(ThreadProc);
+        CpuBus = new CpuBus(this);
+        PpuBus = new PpuBus(this);
+        Ppu = new(this);
+        _cpu = new(this);
+    }
 
-	private void ThreadProc()
-	{
-		ulong tick = 0;
-		var start = Stopwatch.StartNew();
+    public void InsertCartridge(string romFilePath)
+    {
+        Cartridge = new(this, romFilePath);
+    }
 
-		while (_keepRunning)
-		{
-			if (tick % 4 == 0)
-			{
-				Ppu.Tick();
+    private void ThreadProc()
+    {
+        ulong tick = 0;
+        var start = Stopwatch.StartNew();
 
-				if (Ppu.HandleNmi())
-					_cpu.RaiseNmi();
-			}
+        while (_keepRunning)
+        {
+            if (tick % 4 == 0)
+            {
+                Ppu.Tick();
 
-			if (tick % 12 == 0)
-			{
-				_cpu.Tick();
-				// NOTE: signal IRQs AFTER CPU tick
-				// maybe NMIs before?
-			}
+                if (Ppu.HandleNmi())
+                    _cpu.RaiseNmi();
+            }
 
-			tick++;
-		}
-	}
+            if (tick % 12 == 0)
+            {
+                _cpu.Tick();
+                // NOTE: signal IRQs AFTER CPU tick
+                // maybe NMIs before?
+            }
 
-	/// <summary>
-	/// Starts the emulation.
-	/// </summary>
-	public void Start()
-	{
-		lock (_startStopLock)
-		{
-			_keepRunning = true;
-			_thread.Start();
-		}
-	}
+            tick++;
+        }
+    }
 
-	/// <summary>
-	/// Stops the emulation.
-	/// </summary>
-	public void Stop()
-	{
-		lock (_startStopLock)
-		{
-			_keepRunning = false;
-			SpinWait.SpinUntil(() => !_thread.IsAlive);
-		}
-	}
+    /// <summary>
+    /// Starts the emulation.
+    /// </summary>
+    public void Start()
+    {
+        lock (_startStopLock)
+        {
+            _keepRunning = true;
+            _thread.Start();
+        }
+    }
 
-	public void Reset()
-	{
-		_cpu.Reset();
-	}
+    /// <summary>
+    /// Stops the emulation.
+    /// </summary>
+    public void Stop()
+    {
+        lock (_startStopLock)
+        {
+            _keepRunning = false;
+            SpinWait.SpinUntil(() => !_thread.IsAlive);
+        }
+    }
+
+    public void Reset()
+    {
+        _cpu.Reset();
+    }
 }

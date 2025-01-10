@@ -82,8 +82,10 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 		_windowCount++;
 
 		_nes.Start();
+		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\donkeykong.nes");
+		_nes.Reset();
 
-		return SdlAppResult.Continue;
+        return SdlAppResult.Continue;
 	}
 
 	protected override SdlAppResult Iterate()

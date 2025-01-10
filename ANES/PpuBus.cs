@@ -10,7 +10,7 @@ internal sealed class PpuBus(Nes nes) : MemoryBus
 		address &= 0x3FFF;
 
 		if (address < 0x3F00)
-			return nes.Cartridge.PpuReadByte(address, suppressSideEffects);
+			return nes.Cartridge?.PpuReadByte(address, suppressSideEffects) ?? 0xFF;
 
 		// $3F00-3FFF is not configurable, always mapped to the internal palette control.
 		address -= 0x3F00;
@@ -40,6 +40,6 @@ internal sealed class PpuBus(Nes nes) : MemoryBus
 			nes.PaletteRam[address] = value;
 		}
 
-		nes.Cartridge.PpuWriteByte(address, value);
+		nes.Cartridge?.PpuWriteByte(address, value);
 	}
 }
