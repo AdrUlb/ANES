@@ -1,27 +1,27 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		
+
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<InvariantGlobalization>true</InvariantGlobalization>
-		
+
 	</PropertyGroup>
-	
+
 	<PropertyGroup>
 		<!-- Detect when publishing -->
 		<IsPublishing>false</IsPublishing>
 		<IsPublishing Condition="'$(_IsPublishing)'!=''">true</IsPublishing>
-		
+
 		<PublishAot>true</PublishAot>
 		<PublishTrimmed>true</PublishTrimmed>
 		<TrimMode>full</TrimMode>
 		<OptimizationPreference>Speed</OptimizationPreference>
 		<IlcInstructionSet>avx2,bmi2,fma,pclmul,popcnt,aes</IlcInstructionSet>
-		
+
 		<StripSymbols Condition="'$(Configuration)|$(IsPublishing)'=='Release|true'">true</StripSymbols>
 		<CopyOutputSymbolsToPublishDirectory Condition="'$(Configuration)|$(IsPublishing)'=='Release|true'">false</CopyOutputSymbolsToPublishDirectory>
 		<DefineConstants Condition="'$(IsPublishing)'!='true'">MY_SET_DLLIMPORTRESOLVER;$(DefineConstants)</DefineConstants>
@@ -33,18 +33,23 @@
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 			<CopyToPublishDirectory>Never</CopyToPublishDirectory>
 		</Content>
+		<Content Include="..\NativeLibs\win-x64\SDL3-3.1.8\SDL3.dll">
+			<Link>runtimes/win-x64/native/SDL3.dll</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<CopyToPublishDirectory>Never</CopyToPublishDirectory>
+		</Content>
 	</ItemGroup>
 
 	<ItemGroup>
 		<!-- Generate direct PInvoke calls for everything in __Internal -->
 		<!-- This option replicates Mono AOT behavior that generates direct PInvoke calls for __Internal -->
-		<DirectPInvoke Include="__Internal" Visible="false"/>
+		<DirectPInvoke Include="__Internal" Visible="false" />
 
 		<!-- Generate direct PInvoke calls for everything in libc (also matches libc.so on Linux or libc.dylib on macOS) -->
-		<DirectPInvoke Include="libc" Visible="false"/>
+		<DirectPInvoke Include="libc" Visible="false" />
 		<!--  Link SDL3 statically -->
-		<DirectPInvoke Include="SDL3" Visible="false"/>
-		<NativeLibrary Include="..\NativeLibs\linux-x64\libSDL3.a" Condition="'$(RuntimeIdentifier)'=='linux-x64'" Visible="false"/>
+		<DirectPInvoke Include="SDL3" Visible="false" />
+		<NativeLibrary Include="..\NativeLibs\linux-x64\libSDL3.a" Condition="'$(RuntimeIdentifier)'=='linux-x64'" Visible="false" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -60,7 +65,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Sdl3Sharp\Sdl3Sharp.csproj"/>
+		<ProjectReference Include="..\Sdl3Sharp\Sdl3Sharp.csproj" />
 	</ItemGroup>
 
 </Project>
