@@ -126,13 +126,14 @@ public partial class MainWindow : Form
 
 	protected override void OnClosed(EventArgs e)
 	{
-		_anesRenderer.Dispose();
-		_sdlRenderer.Destroy();
 		_quit = true;
 		SpinWait.SpinUntil(() => !_renderThread.IsAlive);
 
-		_nes.Stop();
+		_anesRenderer.Dispose();
+		_sdlRenderer.Destroy();
 
 		base.OnClosed(e);
+
+		_nes.Stop();
 	}
 }

@@ -13,15 +13,7 @@ internal sealed class App() : SdlApp(SdlInitFlags.Video)
 	private SdlRenderer _renderer = null!;
 	private AnesSdlRenderer _anesRenderer = null!;
 
-	private volatile bool _quit = false;
 	private volatile bool _waitingForFrame = true;
-
-	private void OnFrameReady(object? sender, EventArgs e)
-	{
-		_waitingForFrame = false;
-
-		while (!_waitingForFrame && !_quit) { }
-	}
 
 	protected override SdlAppResult Init()
 	{
@@ -43,6 +35,7 @@ internal sealed class App() : SdlApp(SdlInitFlags.Video)
 	protected override SdlAppResult Iterate()
 	{
 		_renderer.Clear();
+		_waitingForFrame = false;
 		_anesRenderer.Render();
 		_renderer.Present();
 
@@ -120,11 +113,12 @@ internal sealed class App() : SdlApp(SdlInitFlags.Video)
 
 	protected override void Quit(SdlAppResult result)
 	{
-		_anesRenderer.Dispose();
-		_quit = true;
+		SpinWait.SpinUntil(() => _waitingForFrame);
 
-		_nes.Stop();
+		_anesRenderer.Dispose();
 		_renderer.Destroy();
 		_window.Destroy();
+
+		_nes.Stop();
 	}
 }
