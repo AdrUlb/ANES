@@ -17,17 +17,6 @@
 		<DefineConstants Condition="$(IsPublishing)">PUBLISH;$(DefineConstants)</DefineConstants>
 	</PropertyGroup>
 	
-	<PropertyGroup>	
-		<PublishAot>true</PublishAot>
-		<PublishTrimmed>true</PublishTrimmed>
-		<TrimMode>full</TrimMode>
-		<OptimizationPreference>Speed</OptimizationPreference>
-		<IlcInstructionSet>avx2,bmi2,fma,pclmul,popcnt,aes</IlcInstructionSet>
-
-		<StripSymbols Condition="'$(Configuration)|$(IsPublishing)'=='Release|true'">true</StripSymbols>
-		<CopyOutputSymbolsToPublishDirectory Condition="'$(Configuration)|$(IsPublishing)'=='Release|true'">false</CopyOutputSymbolsToPublishDirectory>
-	</PropertyGroup>
-
 	<ItemGroup>
 		<Content Include="..\NativeLibs\linux-x64\libSDL3.so.0.1.7">
 			<Link>runtimes/linux-x64/native/libSDL3.so</Link>
@@ -45,6 +34,14 @@
 			<CopyToPublishDirectory>Always</CopyToPublishDirectory>
 		</Content>
 	</ItemGroup>
+
+	<PropertyGroup>
+		<PublishAot>true</PublishAot>
+		<PublishTrimmed>true</PublishTrimmed>
+		<TrimMode>full</TrimMode>
+		<OptimizationPreference>Speed</OptimizationPreference>
+		<IlcInstructionSet>avx2,bmi2,fma,pclmul,popcnt,aes</IlcInstructionSet>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<!-- Generate direct PInvoke calls for everything in __Internal -->

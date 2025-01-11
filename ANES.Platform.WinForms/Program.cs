@@ -13,7 +13,7 @@ internal static class Program
 		ApplicationConfiguration.Initialize();
 
 #pragma warning disable WFO5001
-		Application.SetColorMode(SystemColorMode.System);
+		Application.SetColorMode(SystemColorMode.Classic);
 #pragma warning restore WFO5001
 
 		Application.Run(new MainWindow());
