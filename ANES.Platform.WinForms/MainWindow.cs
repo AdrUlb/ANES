@@ -6,8 +6,6 @@ namespace ANES.Platform.Windows;
 
 public partial class MainWindow : Form
 {
-	private const int _scale = 2;
-
 	private readonly Thread _emuThread;
 
 	private readonly Nes _nes = new();
@@ -29,9 +27,14 @@ public partial class MainWindow : Form
 
 		_emuThread = new(ThreadProc);
 
+		SetScale(3);
+	}
+
+	private void SetScale(float scale)
+	{
 		// Adjust the window size to fit the NES screen
-		var diffX = (AnesSdlRenderer.ScreenWidth * _scale) - sdlControl.Width;
-		var diffY = (AnesSdlRenderer.ScreenHeight * _scale) - sdlControl.Height;
+		var diffX = (int)((AnesSdlRenderer.ScreenWidth * scale) - sdlControl.Width);
+		var diffY = (int)((AnesSdlRenderer.ScreenHeight * scale) - sdlControl.Height);
 		ClientSize += new Size(diffX, diffY);
 	}
 
@@ -47,6 +50,68 @@ public partial class MainWindow : Form
 		_emuThread.Start();
 	}
 
+	protected override void OnKeyDown(KeyEventArgs e)
+	{
+		switch (e.KeyCode)
+		{
+			case Keys.A:
+				_nes.Controllers.Controller1.ButtonB = true;
+				break;
+			case Keys.S:
+				_nes.Controllers.Controller1.ButtonA = true;
+				break;
+			case Keys.ShiftKey:
+				_nes.Controllers.Controller1.ButtonSelect = true;
+				break;
+			case Keys.Enter:
+				_nes.Controllers.Controller1.ButtonStart = true;
+				break;
+			case Keys.Up:
+				_nes.Controllers.Controller1.ButtonUp = true;
+				break;
+			case Keys.Down:
+				_nes.Controllers.Controller1.ButtonDown = true;
+				break;
+			case Keys.Left:
+				_nes.Controllers.Controller1.ButtonLeft = true;
+				break;
+			case Keys.Right:
+				_nes.Controllers.Controller1.ButtonRight = true;
+				break;
+		}
+	}
+
+	protected override void OnKeyUp(KeyEventArgs e)
+	{
+		switch (e.KeyCode)
+		{
+			case Keys.A:
+				_nes.Controllers.Controller1.ButtonB = false;
+				break;
+			case Keys.S:
+				_nes.Controllers.Controller1.ButtonA = false;
+				break;
+			case Keys.ShiftKey:
+				_nes.Controllers.Controller1.ButtonSelect = false;
+				break;
+			case Keys.Enter:
+				_nes.Controllers.Controller1.ButtonStart = false;
+				break;
+			case Keys.Up:
+				_nes.Controllers.Controller1.ButtonUp = false;
+				break;
+			case Keys.Down:
+				_nes.Controllers.Controller1.ButtonDown = false;
+				break;
+			case Keys.Left:
+				_nes.Controllers.Controller1.ButtonLeft = false;
+				break;
+			case Keys.Right:
+				_nes.Controllers.Controller1.ButtonRight = false;
+				break;
+		}
+	}
+
 	private void OnFrameReady(object? sender, EventArgs e)
 	{
 		_waitingForFrame = false;
@@ -57,7 +122,7 @@ public partial class MainWindow : Form
 	private void ThreadProc()
 	{
 		_nes.Start();
-		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\smb1.nes");
+		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\pacman.nes");
 		_nes.Reset();
 
 		while (_keepRunning)
