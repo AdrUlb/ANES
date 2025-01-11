@@ -13,7 +13,6 @@ internal class CpuOperation(CpuInstruction instruction, CpuAddressingMode addres
 
 	public readonly CpuOperationType Type = instruction switch
 	{
-		CpuInstruction.NotImplemented => CpuOperationType.Implied,
 		CpuInstruction.None => CpuOperationType.Implied,
 		CpuInstruction.Adc => CpuOperationType.Read,
 		CpuInstruction.And => CpuOperationType.Read,

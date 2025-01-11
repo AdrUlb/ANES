@@ -2,7 +2,7 @@ using ANES.Rendering.Sdl3;
 using Sdl3Sharp;
 using System.ComponentModel;
 
-namespace ANES.Platform.Windows;
+namespace ANES.Platform.WinForms;
 
 public partial class MainWindow : Form
 {

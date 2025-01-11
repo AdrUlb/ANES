@@ -1,4 +1,6 @@
-﻿namespace ANES.Platform.Windows;
+﻿using ANES.Platform.WinForms.Controls;
+
+namespace ANES.Platform.WinForms;
 
 partial class MainWindow
 {
@@ -29,7 +31,7 @@ partial class MainWindow
 	private void InitializeComponent()
 	{
 		sdlControl = new SdlControl();
-		menuStrip1 = new MenuStrip();
+		menuStrip1 = new MyMenuStrip();
 		fileToolStripMenuItem = new ToolStripMenuItem();
 		openToolStripMenuItem = new ToolStripMenuItem();
 		toolStripMenuItem1 = new ToolStripSeparator();
@@ -41,6 +43,7 @@ partial class MainWindow
 		// 
 		// sdlControl
 		// 
+		sdlControl.BackColor = Color.Black;
 		sdlControl.Dock = DockStyle.Fill;
 		sdlControl.Location = new Point(0, 24);
 		sdlControl.Name = "sdlControl";
@@ -49,10 +52,11 @@ partial class MainWindow
 		// 
 		// menuStrip1
 		// 
+		menuStrip1.BackColor = SystemColors.MenuBar;
 		menuStrip1.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, helpToolStripMenuItem });
 		menuStrip1.Location = new Point(0, 0);
 		menuStrip1.Name = "menuStrip1";
-		menuStrip1.RenderMode = ToolStripRenderMode.System;
+		menuStrip1.Padding = new Padding(0);
 		menuStrip1.Size = new Size(320, 24);
 		menuStrip1.TabIndex = 1;
 		menuStrip1.Text = "menuStrip1";
@@ -61,14 +65,14 @@ partial class MainWindow
 		// 
 		fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { openToolStripMenuItem, toolStripMenuItem1, exitToolStripMenuItem });
 		fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-		fileToolStripMenuItem.Size = new Size(37, 20);
-		fileToolStripMenuItem.Text = "File";
+		fileToolStripMenuItem.Size = new Size(37, 24);
+		fileToolStripMenuItem.Text = "&File";
 		// 
 		// openToolStripMenuItem
 		// 
 		openToolStripMenuItem.Name = "openToolStripMenuItem";
 		openToolStripMenuItem.Size = new Size(103, 22);
-		openToolStripMenuItem.Text = "Open";
+		openToolStripMenuItem.Text = "&Open";
 		// 
 		// toolStripMenuItem1
 		// 
@@ -79,20 +83,20 @@ partial class MainWindow
 		// 
 		exitToolStripMenuItem.Name = "exitToolStripMenuItem";
 		exitToolStripMenuItem.Size = new Size(103, 22);
-		exitToolStripMenuItem.Text = "Exit";
+		exitToolStripMenuItem.Text = "E&xit";
 		// 
 		// helpToolStripMenuItem
 		// 
 		helpToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { aboutToolStripMenuItem });
 		helpToolStripMenuItem.Name = "helpToolStripMenuItem";
-		helpToolStripMenuItem.Size = new Size(44, 20);
-		helpToolStripMenuItem.Text = "Help";
+		helpToolStripMenuItem.Size = new Size(44, 24);
+		helpToolStripMenuItem.Text = "&Help";
 		// 
 		// aboutToolStripMenuItem
 		// 
 		aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
 		aboutToolStripMenuItem.Size = new Size(107, 22);
-		aboutToolStripMenuItem.Text = "About";
+		aboutToolStripMenuItem.Text = "&About";
 		// 
 		// MainWindow
 		// 
@@ -112,7 +116,7 @@ partial class MainWindow
 	#endregion
 
 	private SdlControl sdlControl;
-	private MenuStrip menuStrip1;
+	private MyMenuStrip menuStrip1;
 	private ToolStripMenuItem fileToolStripMenuItem;
 	private ToolStripMenuItem openToolStripMenuItem;
 	private ToolStripSeparator toolStripMenuItem1;

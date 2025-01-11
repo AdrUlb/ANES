@@ -11,7 +11,7 @@ internal sealed class Cpu(Computer computer)
 		// 0x00 - 0x0F
 		new(CpuInstruction.Brk, CpuAddressingMode.Implied),
 		new(CpuInstruction.Ora, CpuAddressingMode.XIndexedIndirect),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
 		new(CpuInstruction.Slo, CpuAddressingMode.XIndexedIndirect, true),
 		new(CpuInstruction.Nop, CpuAddressingMode.ZeroPage, true),
 		new(CpuInstruction.Ora, CpuAddressingMode.ZeroPage),
@@ -28,7 +28,7 @@ internal sealed class Cpu(Computer computer)
 		// 0x10 - 0x1F
 		new(CpuInstruction.Bpl, CpuAddressingMode.Relative),
 		new(CpuInstruction.Ora, CpuAddressingMode.IndirectYIndexed),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
 		new(CpuInstruction.Slo, CpuAddressingMode.IndirectYIndexed, true),
 		new(CpuInstruction.Nop, CpuAddressingMode.ZeroPageXIndexed, true),
 		new(CpuInstruction.Ora, CpuAddressingMode.ZeroPageXIndexed),
@@ -45,7 +45,7 @@ internal sealed class Cpu(Computer computer)
 		// 0x20 - 0x2F
 		new(CpuInstruction.Jsr, CpuAddressingMode.Absolute),
 		new(CpuInstruction.And, CpuAddressingMode.XIndexedIndirect),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
 		new(CpuInstruction.Rla, CpuAddressingMode.XIndexedIndirect, true),
 		new(CpuInstruction.Bit, CpuAddressingMode.ZeroPage),
 		new(CpuInstruction.And, CpuAddressingMode.ZeroPage),
@@ -62,7 +62,7 @@ internal sealed class Cpu(Computer computer)
 		// 0x30 - 0x3F
 		new(CpuInstruction.Bmi, CpuAddressingMode.Relative),
 		new(CpuInstruction.And, CpuAddressingMode.IndirectYIndexed),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
 		new(CpuInstruction.Rla, CpuAddressingMode.IndirectYIndexed, true),
 		new(CpuInstruction.Nop, CpuAddressingMode.ZeroPageXIndexed, true),
 		new(CpuInstruction.And, CpuAddressingMode.ZeroPageXIndexed),
@@ -79,7 +79,7 @@ internal sealed class Cpu(Computer computer)
 		// 0x40 - 0x4F
 		new(CpuInstruction.Rti, CpuAddressingMode.Implied),
 		new(CpuInstruction.Eor, CpuAddressingMode.XIndexedIndirect),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
 		new(CpuInstruction.Sre, CpuAddressingMode.XIndexedIndirect, true),
 		new(CpuInstruction.Nop, CpuAddressingMode.ZeroPage, true),
 		new(CpuInstruction.Eor, CpuAddressingMode.ZeroPage),
@@ -96,7 +96,7 @@ internal sealed class Cpu(Computer computer)
 		// 0x50 - 0x5F
 		new(CpuInstruction.Bvc, CpuAddressingMode.Relative),
 		new(CpuInstruction.Eor, CpuAddressingMode.IndirectYIndexed),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
 		new(CpuInstruction.Sre, CpuAddressingMode.IndirectYIndexed, true),
 		new(CpuInstruction.Nop, CpuAddressingMode.ZeroPageXIndexed, true),
 		new(CpuInstruction.Eor, CpuAddressingMode.ZeroPageXIndexed),
@@ -113,7 +113,7 @@ internal sealed class Cpu(Computer computer)
 		// 0x60 - 0x6F
 		new(CpuInstruction.Rts, CpuAddressingMode.Implied),
 		new(CpuInstruction.Adc, CpuAddressingMode.XIndexedIndirect),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
 		new(CpuInstruction.Rra, CpuAddressingMode.XIndexedIndirect, true),
 		new(CpuInstruction.Nop, CpuAddressingMode.ZeroPage, true),
 		new(CpuInstruction.Adc, CpuAddressingMode.ZeroPage),
@@ -130,7 +130,7 @@ internal sealed class Cpu(Computer computer)
 		// 0x70 - 0x7F
 		new(CpuInstruction.Bvs, CpuAddressingMode.Relative),
 		new(CpuInstruction.Adc, CpuAddressingMode.IndirectYIndexed),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
 		new(CpuInstruction.Rra, CpuAddressingMode.IndirectYIndexed, true),
 		new(CpuInstruction.Nop, CpuAddressingMode.ZeroPageXIndexed, true),
 		new(CpuInstruction.Adc, CpuAddressingMode.ZeroPageXIndexed),
@@ -156,7 +156,7 @@ internal sealed class Cpu(Computer computer)
 		new(CpuInstruction.Dey, CpuAddressingMode.Implied),
 		new(CpuInstruction.Nop, CpuAddressingMode.Immediate, true),
 		new(CpuInstruction.Txa, CpuAddressingMode.Implied),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
 		new(CpuInstruction.Sty, CpuAddressingMode.Absolute),
 		new(CpuInstruction.Sta, CpuAddressingMode.Absolute),
 		new(CpuInstruction.Stx, CpuAddressingMode.Absolute),
@@ -164,8 +164,8 @@ internal sealed class Cpu(Computer computer)
 		// 0x90 - 0x9F
 		new(CpuInstruction.Bcc, CpuAddressingMode.Relative),
 		new(CpuInstruction.Sta, CpuAddressingMode.IndirectYIndexed),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
 		new(CpuInstruction.Sty, CpuAddressingMode.ZeroPageXIndexed),
 		new(CpuInstruction.Sta, CpuAddressingMode.ZeroPageXIndexed),
 		new(CpuInstruction.Stx, CpuAddressingMode.ZeroPageYIndexed),
@@ -173,11 +173,11 @@ internal sealed class Cpu(Computer computer)
 		new(CpuInstruction.Tya, CpuAddressingMode.Implied),
 		new(CpuInstruction.Sta, CpuAddressingMode.AbsoluteYIndexed),
 		new(CpuInstruction.Txs, CpuAddressingMode.Implied),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
 		new(CpuInstruction.Shy, CpuAddressingMode.AbsoluteXIndexed),
 		new(CpuInstruction.Sta, CpuAddressingMode.AbsoluteXIndexed),
 		new(CpuInstruction.Shx, CpuAddressingMode.AbsoluteYIndexed),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
 		// 0xA0 - 0xAF
 		new(CpuInstruction.Ldy, CpuAddressingMode.Immediate),
 		new(CpuInstruction.Lda, CpuAddressingMode.XIndexedIndirect),
@@ -198,7 +198,7 @@ internal sealed class Cpu(Computer computer)
 		// 0xB0 - 0xBF
 		new(CpuInstruction.Bcs, CpuAddressingMode.Relative),
 		new(CpuInstruction.Lda, CpuAddressingMode.IndirectYIndexed),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
 		new(CpuInstruction.Lax, CpuAddressingMode.IndirectYIndexed, true),
 		new(CpuInstruction.Ldy, CpuAddressingMode.ZeroPageXIndexed),
 		new(CpuInstruction.Lda, CpuAddressingMode.ZeroPageXIndexed),
@@ -207,7 +207,7 @@ internal sealed class Cpu(Computer computer)
 		new(CpuInstruction.Clv, CpuAddressingMode.Implied),
 		new(CpuInstruction.Lda, CpuAddressingMode.AbsoluteYIndexed),
 		new(CpuInstruction.Tsx, CpuAddressingMode.Implied),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
 		new(CpuInstruction.Ldy, CpuAddressingMode.AbsoluteXIndexed),
 		new(CpuInstruction.Lda, CpuAddressingMode.AbsoluteXIndexed),
 		new(CpuInstruction.Ldx, CpuAddressingMode.AbsoluteYIndexed),
@@ -232,7 +232,7 @@ internal sealed class Cpu(Computer computer)
 		// 0xD0 - 0xDF
 		new(CpuInstruction.Bne, CpuAddressingMode.Relative),
 		new(CpuInstruction.Cmp, CpuAddressingMode.IndirectYIndexed),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
 		new(CpuInstruction.Dcp, CpuAddressingMode.IndirectYIndexed, true),
 		new(CpuInstruction.Nop, CpuAddressingMode.ZeroPageXIndexed, true),
 		new(CpuInstruction.Cmp, CpuAddressingMode.ZeroPageXIndexed),
@@ -266,7 +266,7 @@ internal sealed class Cpu(Computer computer)
 		// 0xF0 - 0xFF
 		new(CpuInstruction.Beq, CpuAddressingMode.Relative),
 		new(CpuInstruction.Sbc, CpuAddressingMode.IndirectYIndexed),
-		new(CpuInstruction.NotImplemented, CpuAddressingMode.NotImplemented),
+		new(CpuInstruction.None, CpuAddressingMode.NotImplemented),
 		new(CpuInstruction.Isc, CpuAddressingMode.IndirectYIndexed, true),
 		new(CpuInstruction.Nop, CpuAddressingMode.ZeroPageXIndexed, true),
 		new(CpuInstruction.Sbc, CpuAddressingMode.ZeroPageXIndexed),
@@ -355,7 +355,7 @@ internal sealed class Cpu(Computer computer)
 	{
 		var opcode = FetchOperationByte();
 		_op = _operationsByOpcode[opcode];
-		if (_op.Instruction == CpuInstruction.NotImplemented)
+		if (_op.Instruction == CpuInstruction.None)
 			throw new NotImplementedException($"Opcode 0x{opcode:X2} not implemented.");
 	}
 
@@ -446,7 +446,6 @@ internal sealed class Cpu(Computer computer)
 	/// </summary>
 	public void Reset()
 	{
-		_op = CpuOperation.None; // Do not wait until the current instruction has finished executing
 		_traceCycles = 0; // Reset trace cycle counting
 		_pendingReset = true;
 		_signalInterruptReset = true;

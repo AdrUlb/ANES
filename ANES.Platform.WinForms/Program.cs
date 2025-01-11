@@ -1,4 +1,4 @@
-namespace ANES.Platform.Windows;
+namespace ANES.Platform.WinForms;
 
 internal static class Program
 {
@@ -11,6 +11,11 @@ internal static class Program
 		// To customize application configuration such as set high DPI settings or default font,
 		// see https://aka.ms/applicationconfiguration.
 		ApplicationConfiguration.Initialize();
+
+#pragma warning disable WFO5001
+		Application.SetColorMode(SystemColorMode.System);
+#pragma warning restore WFO5001
+
 		Application.Run(new MainWindow());
 	}
 }

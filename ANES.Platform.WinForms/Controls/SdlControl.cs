@@ -1,11 +1,16 @@
 ﻿using Sdl3Sharp;
 using System.ComponentModel;
 
-namespace ANES.Platform.Windows;
+namespace ANES.Platform.WinForms.Controls;
 internal class SdlControl : Panel
 {
 	[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 	public SdlWindow SdlWindow { get; private set; } = null!;
+
+	public SdlControl()
+	{
+		BackColor = Color.Black;
+	}
 
 	protected override void CreateHandle()
 	{
@@ -21,18 +26,5 @@ internal class SdlControl : Panel
 		}
 		else
 			SdlWindow = null!;
-	}
-
-	protected override void OnPaint(PaintEventArgs e)
-	{
-		// Do nothing
-	}
-
-	protected override void OnPaintBackground(PaintEventArgs e)
-	{
-		if (DesignMode || IsAncestorSiteInDesignMode)
-		{
-			e.Graphics.Clear(Color.Black);
-		}
 	}
 }

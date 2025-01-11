@@ -2,7 +2,6 @@ namespace ANES;
 
 internal enum CpuInstruction
 {
-	NotImplemented,
 	None,
 	Adc,
 	And,
