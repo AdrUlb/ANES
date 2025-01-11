@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace ANES;
 
-internal sealed class Nes : Computer
+public sealed class Nes : Computer
 {
 	private const double _masterTicksPerSecond = 236250000.0 / 11.0;
 	private const double _ppuTicksPerSecond = _masterTicksPerSecond / 4.0;
@@ -21,14 +21,14 @@ internal sealed class Nes : Computer
 
 	public override CpuBus CpuBus { get; }
 
-	public PpuBus PpuBus { get; }
+	internal PpuBus PpuBus { get; }
 
 	internal Cartridge? Cartridge = null;
-	internal readonly Controllers Controllers = new();
-	internal readonly Ppu Ppu;
+	public readonly Controllers Controllers = new();
+	public readonly Ppu Ppu;
 	private readonly Cpu _cpu;
 
-	public event EventHandler? Vblank;
+	public event EventHandler? FrameReady;
 
 	public Nes()
 	{
@@ -47,7 +47,7 @@ internal sealed class Nes : Computer
 			_cpu.RaiseNmi();
 
 		if (e.Frame)
-			Vblank?.Invoke(this, EventArgs.Empty);
+			FrameReady?.Invoke(this, EventArgs.Empty);
 	}
 
 	public void InsertCartridge(string romFilePath)

@@ -20,6 +20,7 @@ public class SdlTexture
 	}
 
 	public static SdlTexture CreateWithProperties(SdlRenderer renderer, SdlProperties props) => new(renderer, SDL_CreateTextureWithProperties(renderer.Handle, props.Id));
+	
 	public void Destroy() => SDL_DestroyTexture(_handle);
 
 	public unsafe void Render(RectangleF sourceRect, RectangleF targetRect)

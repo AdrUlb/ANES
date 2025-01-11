@@ -1,6 +1,6 @@
 namespace ANES;
 
-internal sealed class Controllers
+public sealed class Controllers
 {
 	public struct ControllerState()
 	{

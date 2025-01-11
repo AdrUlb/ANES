@@ -1,6 +1,6 @@
-namespace Sdl3Sharp;
+using static Sdl3Sharp.Internal.Imports;
 
-using static Internal.Imports;
+namespace Sdl3Sharp;
 
 public abstract class SdlApp(SdlInitFlags initFlags)
 {
@@ -11,7 +11,7 @@ public abstract class SdlApp(SdlInitFlags initFlags)
 
 	private SdlAppResult InternalInit(ref nint appstate, int argc, string[] argv)
 	{
-		SDL_Init(initFlags);
+		Sdl.Init(initFlags);
 		return Init();
 	}
 

@@ -1,0 +1,72 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<InvariantGlobalization>true</InvariantGlobalization>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<!-- Detect when publishing -->
+		<IsPublishing>false</IsPublishing>
+		<IsPublishing Condition="'$(_IsPublishing)'!=''">true</IsPublishing>
+
+		<DefineConstants Condition="$(IsPublishing)">PUBLISH;$(DefineConstants)</DefineConstants>
+		
+		<PublishAot>true</PublishAot>
+		<PublishTrimmed>true</PublishTrimmed>
+		<TrimMode>full</TrimMode>
+		<OptimizationPreference>Speed</OptimizationPreference>
+		<IlcInstructionSet>avx2,bmi2,fma,pclmul,popcnt,aes</IlcInstructionSet>
+
+		<StripSymbols Condition="'$(Configuration)|$(IsPublishing)'=='Release|true'">true</StripSymbols>
+		<CopyOutputSymbolsToPublishDirectory Condition="'$(Configuration)|$(IsPublishing)'=='Release|true'">false</CopyOutputSymbolsToPublishDirectory>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Content Include="..\NativeLibs\linux-x64\libSDL3.so.0.1.7">
+			<Link>runtimes/linux-x64/native/libSDL3.so</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<CopyToPublishDirectory>Never</CopyToPublishDirectory>
+		</Content>
+		<Content Include="..\NativeLibs\win-x64\SDL3-3.1.8\SDL3.dll">
+			<Link>runtimes/win-x64/native/SDL3.dll</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<CopyToPublishDirectory>Never</CopyToPublishDirectory>
+		</Content>
+		<Content Include="..\NativeLibs\win-x64\SDL3-3.1.8\SDL3.dll" Condition="'$(RuntimeIdentifier)|$(IsPublishing)'=='win-x64|true'">
+			<Link>SDL3.dll</Link>
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+			<CopyToPublishDirectory>Always</CopyToPublishDirectory>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Generate direct PInvoke calls for everything in __Internal -->
+		<!-- This option replicates Mono AOT behavior that generates direct PInvoke calls for __Internal -->
+		<DirectPInvoke Include="__Internal" Visible="false" />
+
+		<!-- Generate direct PInvoke calls for everything in libc (also matches libc.so on Linux or libc.dylib on macOS) -->
+		<DirectPInvoke Include="libc" Visible="false" />
+		<!--  Link SDL3 statically -->
+		<DirectPInvoke Include="SDL3" Visible="false" />
+		<NativeLibrary Include="..\NativeLibs\linux-x64\libSDL3.a" Condition="'$(RuntimeIdentifier)'=='linux-x64'" Visible="false" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(RuntimeIdentifier)'=='win-x64'">
+		<NativeLibrary Include="..\NativeLibs\win-x64\SDL3-3.1.8\SDL3.lib" Visible="false" />
+		<NativeLibrary Include="gdi32.lib" Visible="false" />
+		<NativeLibrary Include="imm32.lib" Visible="false" />
+		<NativeLibrary Include="setupapi.lib" Visible="false" />
+		<NativeLibrary Include="shell32.lib" Visible="false" />
+		<NativeLibrary Include="winmm.lib" Visible="false" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\ANES.Rendering.Sdl3\ANES.Rendering.Sdl3.csproj" />
+	</ItemGroup>
+
+</Project>

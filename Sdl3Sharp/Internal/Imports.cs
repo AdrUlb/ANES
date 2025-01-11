@@ -29,6 +29,9 @@ internal static partial class Imports
 	[LibraryImport(_libraryName, StringMarshalling = StringMarshalling.Utf8)]
 	internal static partial nint SDL_CreateWindow(string title, int w, int h, SdlWindowFlags flags);
 
+	[LibraryImport(_libraryName)]
+	internal static partial nint SDL_CreateWindowWithProperties(SDL_PropertiesID props);
+
 	[LibraryImport(_libraryName, StringMarshalling = StringMarshalling.Utf8)]
 	internal static partial nint SDL_CreateRenderer(nint window, string name);
 
@@ -66,6 +69,10 @@ internal static partial class Imports
 	[LibraryImport(_libraryName, StringMarshalling = StringMarshalling.Utf8)]
 	[return: MarshalAs(UnmanagedType.U1)]
 	internal static partial bool SDL_SetNumberProperty(SDL_PropertiesID props, string name, long value);
+
+	[LibraryImport(_libraryName, StringMarshalling = StringMarshalling.Utf8)]
+	[return: MarshalAs(UnmanagedType.U1)]
+	internal static partial bool SDL_SetPointerProperty(SDL_PropertiesID props, string name, nint value);
 
 	[LibraryImport(_libraryName)]
 	internal static partial nint SDL_CreateTextureWithProperties(nint renderer, SDL_PropertiesID props);

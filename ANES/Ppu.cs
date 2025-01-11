@@ -11,16 +11,16 @@ namespace ANES;
 // https://www.nesdev.org/wiki/PPU_sprite_evaluation
 // https://www.nesdev.org/w/images/default/4/4f/Ppu.svg
 
-internal sealed class PpuVblankEventArgs(bool frame, bool nmi) : EventArgs
+public sealed class PpuVblankEventArgs(bool frame, bool nmi) : EventArgs
 {
 	public readonly bool Frame = frame;
 	public readonly bool Nmi = nmi;
 }
 
-internal sealed class Ppu(Nes nes)
+public sealed class Ppu(Nes nes)
 {
-	internal const int PictureWidth = 256;
-	internal const int PictureHeight = 240;
+	public const int PictureWidth = 256;
+	public const int PictureHeight = 240;
 
 	// TODO: set flag correctly
 	private bool _statusVblank;
@@ -66,7 +66,7 @@ internal sealed class Ppu(Nes nes)
 	private readonly byte[] _palette = File.ReadAllBytes("Composite_wiki.pal");
 
 	internal readonly byte[] Oam = new byte[256];
-	internal readonly Color[] Picture = new Color[PictureWidth * PictureHeight];
+	public readonly Color[] Picture = new Color[PictureWidth * PictureHeight];
 	private int _pictureIndex = 0;
 
 	private bool IsRenderingEnabled => _maskEnableBackground || _maskEnableSprites;
@@ -380,7 +380,6 @@ internal sealed class Ppu(Nes nes)
 			_ => throw new UnreachableException()
 		};
 
-		paletteIndex += 0x40 * App.Test;
 		paletteIndex %= _palette.Length / 3;
 
 		Picture[_pictureIndex++] = Color.FromArgb(_palette[paletteIndex * 3 + 0], _palette[paletteIndex * 3 + 1], _palette[paletteIndex * 3 + 2]);
@@ -441,7 +440,6 @@ internal sealed class Ppu(Nes nes)
 						_ => throw new UnreachableException()
 					};
 
-					paletteIndex += 0x40 * App.Test;
 					paletteIndex %= _palette.Length / 3;
 
 					Picture[pictureIndex] = Color.FromArgb(_palette[paletteIndex * 3 + 0], _palette[paletteIndex * 3 + 1], _palette[paletteIndex * 3 + 2]);

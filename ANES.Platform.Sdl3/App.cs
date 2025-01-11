@@ -1,57 +1,42 @@
+using ANES.Rendering.Sdl3;
 using Sdl3Sharp;
-using System.Diagnostics;
-using System.Drawing;
 
-namespace ANES;
+namespace ANES.Platform.Sdl3;
 
-public sealed class App() : SdlApp(SdlInitFlags.Video)
+internal sealed class App() : SdlApp(SdlInitFlags.Video)
 {
-	private const int _scale = 3;
-	private const bool _palResolution = true;
-
-	private const int _screenWidth = 256;
-	private const int _screenHeight = _palResolution ? 240 : 224;
-	private const int _screenOffsetTop = _palResolution ? 0 : 8;
+	private const int _scale = 2;
 
 	private readonly Nes _nes = new();
+
 	private SdlWindow _window = null!;
 	private SdlRenderer _renderer = null!;
-	private SdlTexture _screen = null!;
+	private AnesSdlRenderer _anesRenderer = null!;
 
 	private volatile bool _quit = false;
-	private volatile bool _waitingForVblank = true;
+	private volatile bool _waitingForFrame = true;
 
-	public static int Test = 0;
-
-	private void VblankHandler(object? sender, EventArgs e)
+	private void OnFrameReady(object? sender, EventArgs e)
 	{
-		_waitingForVblank = false;
+		_waitingForFrame = false;
 
-		while (!_waitingForVblank && !_quit) { }
+		while (!_waitingForFrame && !_quit) { }
 	}
 
 	protected override SdlAppResult Init()
 	{
 		(_window, _renderer) = SdlWindow.CreateWithRenderer(
 			"ANES",
-			_screenWidth * _scale,
-			_screenHeight * _scale,
+			AnesSdlRenderer.ScreenWidth * _scale,
+			AnesSdlRenderer.ScreenHeight * _scale,
 			SdlWindowFlags.Resizable
 		);
+		_anesRenderer = new(_nes, _renderer);
 
-		var tilesTexProps = SdlProperties.Create();
-		tilesTexProps.Set(SdlProperties.TextureCreateAccess, (long)SdlTextureAccess.Streaming);
-		tilesTexProps.Set(SdlProperties.TextureCreateWidth, Ppu.PictureWidth);
-		tilesTexProps.Set(SdlProperties.TextureCreateHeight, Ppu.PictureHeight);
-		tilesTexProps.Set(SdlProperties.TextureCreateFormat, (long)SdlPixelFormat.Argb8888);
-		_screen = SdlTexture.CreateWithProperties(_renderer, tilesTexProps);
-		_screen.SetScaleMode(SdlScaleMode.Nearest);
-		tilesTexProps.Destroy();
-
-		_nes.Vblank += VblankHandler;
+		_nes.FrameReady += OnFrameReady;
 
 		_nes.Start();
-		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\donkeykong.nes");
+		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\pacman.nes");
 		_nes.Reset();
 
 		return SdlAppResult.Continue;
@@ -59,24 +44,13 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 
 	protected override SdlAppResult Iterate()
 	{
-		while (_waitingForVblank && !_quit) { }
-
-		var surface = _screen.LockToSurface();
-		for (var y = 0; y < Ppu.PictureHeight; y++)
-		{
-			var row = surface.GetPixels<int>(y);
-			for (var x = 0; x < _screenWidth; x++)
-				row[x] = _nes.Ppu.Picture[x + y * Ppu.PictureWidth].ToArgb();
-		}
-		_screen.Unlock();
-
-		var srcRect = new RectangleF(0, _screenOffsetTop, _screenWidth, _screenHeight);
+		while (_waitingForFrame && !_quit) { }
 
 		_renderer.Clear();
-		_screen.Render(srcRect, RectangleF.Empty);
+		_anesRenderer.Render();
 		_renderer.Present();
 
-		_waitingForVblank = true;
+		_waitingForFrame = true;
 		return SdlAppResult.Continue;
 	}
 
@@ -112,9 +86,6 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 						break;
 					case SdlScancode.Right:
 						_nes.Controllers.Controller1.ButtonRight = true;
-						break;
-					case SdlScancode.Space:
-						Test++;
 						break;
 				}
 				break;
@@ -156,9 +127,9 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 		_quit = true;
 
 		_nes.Stop();
-		_nes.Vblank -= VblankHandler;
+		_nes.FrameReady -= OnFrameReady;
 
-		_screen.Destroy();
+		_anesRenderer.Dispose();
 		_renderer.Destroy();
 		_window.Destroy();
 	}
