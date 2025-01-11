@@ -29,7 +29,10 @@ public partial class MainWindow : Form
 
 		_emuThread = new(ThreadProc);
 
-		ClientSize = new(AnesSdlRenderer.ScreenWidth * _scale, AnesSdlRenderer.ScreenWidth * _scale);
+		// Adjust the window size to fit the NES screen
+		var diffX = (AnesSdlRenderer.ScreenWidth * _scale) - sdlControl.Width;
+		var diffY = (AnesSdlRenderer.ScreenHeight * _scale) - sdlControl.Height;
+		ClientSize += new Size(diffX, diffY);
 	}
 
 	protected override void OnClosing(CancelEventArgs e)
@@ -53,7 +56,7 @@ public partial class MainWindow : Form
 
 	private void ThreadProc()
 	{
-		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\pacman.nes");
+		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\smb1.nes");
 		_nes.Start();
 		_nes.Reset();
 

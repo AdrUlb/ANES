@@ -36,7 +36,7 @@ internal sealed class App() : SdlApp(SdlInitFlags.Video)
 		_nes.FrameReady += OnFrameReady;
 
 		_nes.Start();
-		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\pacman.nes");
+		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\smb1.nes");
 		_nes.Reset();
 
 		return SdlAppResult.Continue;

@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ANES", "ANES\ANES.csproj", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sdl3Sharp", "Sdl3Sharp\Sdl3Sharp.csproj", "{5326F9DC-3517-43F7-A4CA-A01678001C7C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ANES.Platform.Windows", "ANES.Platform.Windows\ANES.Platform.Windows.csproj", "{F9C7D1DC-4CA8-4F4A-9EF0-3BA82983371A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ANES.Platform.WinForms", "ANES.Platform.WinForms\ANES.Platform.WinForms.csproj", "{F9C7D1DC-4CA8-4F4A-9EF0-3BA82983371A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ANES.Platform.Sdl3", "ANES.Platform.Sdl3\ANES.Platform.Sdl3.csproj", "{972867BF-616D-48E5-977D-3F9E2D5BC3A3}"
 EndProject
