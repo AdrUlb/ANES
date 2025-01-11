@@ -6,6 +6,8 @@ namespace ANES.Platform.Windows;
 
 public partial class MainWindow : Form
 {
+	private const int _scale = 2;
+
 	private readonly Thread _emuThread;
 
 	private readonly Nes _nes = new();
@@ -27,7 +29,7 @@ public partial class MainWindow : Form
 
 		_emuThread = new(ThreadProc);
 
-		ClientSize = new(AnesSdlRenderer.ScreenWidth, AnesSdlRenderer.ScreenWidth);
+		ClientSize = new(AnesSdlRenderer.ScreenWidth * _scale, AnesSdlRenderer.ScreenWidth * _scale);
 	}
 
 	protected override void OnClosing(CancelEventArgs e)
