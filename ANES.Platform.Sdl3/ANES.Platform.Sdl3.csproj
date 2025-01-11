@@ -2,7 +2,8 @@
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net9.0</TargetFramework>
+		<AssemblyName>ANES</AssemblyName>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -13,9 +14,10 @@
 		<!-- Detect when publishing -->
 		<IsPublishing>false</IsPublishing>
 		<IsPublishing Condition="'$(_IsPublishing)'!=''">true</IsPublishing>
-
 		<DefineConstants Condition="$(IsPublishing)">PUBLISH;$(DefineConstants)</DefineConstants>
-		
+	</PropertyGroup>
+	
+	<PropertyGroup>	
 		<PublishAot>true</PublishAot>
 		<PublishTrimmed>true</PublishTrimmed>
 		<TrimMode>full</TrimMode>
@@ -68,5 +70,6 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\ANES.Rendering.Sdl3\ANES.Rendering.Sdl3.csproj" />
 	</ItemGroup>
+
 
 </Project>

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35617.110
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ANES", "ANES\ANES.csproj", "{E8546440-A324-4686-859D-36D94F6B6C16}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ANES.Emulation", "ANES.Emulation\ANES.Emulation.csproj", "{E8546440-A324-4686-859D-36D94F6B6C16}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sdl3Sharp", "Sdl3Sharp\Sdl3Sharp.csproj", "{5326F9DC-3517-43F7-A4CA-A01678001C7C}"
 EndProject

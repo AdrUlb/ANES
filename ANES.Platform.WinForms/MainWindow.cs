@@ -17,9 +17,7 @@ public partial class MainWindow : Form
 	private volatile bool _waitingForFrame = true;
 	public MainWindow()
 	{
-#if !PUBLISH
 		AnesSdlRenderer.SetRuntimeImportResolver();
-#endif
 
 		InitializeComponent();
 
@@ -122,7 +120,7 @@ public partial class MainWindow : Form
 	private void ThreadProc()
 	{
 		_nes.Start();
-		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\pacman.nes");
+		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\smb1.nes");
 		_nes.Reset();
 
 		while (_keepRunning)

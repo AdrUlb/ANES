@@ -1,8 +1,10 @@
 ﻿using Sdl3Sharp;
+using System.ComponentModel;
 
 namespace ANES.Platform.Windows;
 internal class SdlControl : Panel
 {
+	[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 	public SdlWindow SdlWindow { get; private set; } = null!;
 
 	protected override void CreateHandle()

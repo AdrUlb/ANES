@@ -63,7 +63,7 @@ public sealed class Ppu(Nes nes)
 	private ushort _bgPatternLowShifter;
 	private ushort _bgPatternHighShifter;
 
-	private readonly byte[] _palette = File.ReadAllBytes("Composite_wiki.pal");
+	private readonly byte[] _palette = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Composite_wiki.pal"));
 
 	internal readonly byte[] Oam = new byte[256];
 	public readonly Color[] Picture = new Color[PictureWidth * PictureHeight];
