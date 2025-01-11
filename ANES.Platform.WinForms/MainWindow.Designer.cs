@@ -36,17 +36,15 @@ partial class MainWindow
 		exitToolStripMenuItem = new ToolStripMenuItem();
 		helpToolStripMenuItem = new ToolStripMenuItem();
 		aboutToolStripMenuItem = new ToolStripMenuItem();
-		sdlControl.SuspendLayout();
 		menuStrip1.SuspendLayout();
 		SuspendLayout();
 		// 
 		// sdlControl
 		// 
-		sdlControl.Controls.Add(menuStrip1);
 		sdlControl.Dock = DockStyle.Fill;
-		sdlControl.Location = new Point(0, 0);
+		sdlControl.Location = new Point(0, 24);
 		sdlControl.Name = "sdlControl";
-		sdlControl.Size = new Size(320, 240);
+		sdlControl.Size = new Size(320, 216);
 		sdlControl.TabIndex = 0;
 		// 
 		// menuStrip1
@@ -56,7 +54,7 @@ partial class MainWindow
 		menuStrip1.Name = "menuStrip1";
 		menuStrip1.RenderMode = ToolStripRenderMode.System;
 		menuStrip1.Size = new Size(320, 24);
-		menuStrip1.TabIndex = 0;
+		menuStrip1.TabIndex = 1;
 		menuStrip1.Text = "menuStrip1";
 		// 
 		// fileToolStripMenuItem
@@ -102,13 +100,13 @@ partial class MainWindow
 		AutoScaleMode = AutoScaleMode.Font;
 		ClientSize = new Size(320, 240);
 		Controls.Add(sdlControl);
+		Controls.Add(menuStrip1);
 		Name = "MainWindow";
 		Text = "ANES";
-		sdlControl.ResumeLayout(false);
-		sdlControl.PerformLayout();
 		menuStrip1.ResumeLayout(false);
 		menuStrip1.PerformLayout();
 		ResumeLayout(false);
+		PerformLayout();
 	}
 
 	#endregion

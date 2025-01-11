@@ -56,8 +56,8 @@ public partial class MainWindow : Form
 
 	private void ThreadProc()
 	{
-		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\smb1.nes");
 		_nes.Start();
+		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\smb1.nes");
 		_nes.Reset();
 
 		while (_keepRunning)
