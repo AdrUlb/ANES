@@ -5,7 +5,7 @@ namespace ANES.Platform.Sdl3;
 
 internal sealed class App() : SdlApp(SdlInitFlags.Video)
 {
-	private const int _scale = 2;
+	private const int _scale = 3;
 
 	private readonly Nes _nes = new();
 
@@ -33,10 +33,8 @@ internal sealed class App() : SdlApp(SdlInitFlags.Video)
 		);
 		_anesRenderer = new(_nes, _renderer);
 
-		_nes.FrameReady += OnFrameReady;
-
 		_nes.Start();
-		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\smb1.nes");
+		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\pacman.nes");
 		_nes.Reset();
 
 		return SdlAppResult.Continue;
@@ -44,8 +42,6 @@ internal sealed class App() : SdlApp(SdlInitFlags.Video)
 
 	protected override SdlAppResult Iterate()
 	{
-		while (_waitingForFrame && !_quit) { }
-
 		_renderer.Clear();
 		_anesRenderer.Render();
 		_renderer.Present();
@@ -124,12 +120,10 @@ internal sealed class App() : SdlApp(SdlInitFlags.Video)
 
 	protected override void Quit(SdlAppResult result)
 	{
+		_anesRenderer.Dispose();
 		_quit = true;
 
 		_nes.Stop();
-		_nes.FrameReady -= OnFrameReady;
-
-		_anesRenderer.Dispose();
 		_renderer.Destroy();
 		_window.Destroy();
 	}

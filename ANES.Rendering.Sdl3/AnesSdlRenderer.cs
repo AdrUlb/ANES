@@ -15,6 +15,9 @@ public sealed class AnesSdlRenderer : IDisposable
 
 	private readonly SdlRenderer _renderer;
 	private SdlTexture _screen = null!;
+	private volatile bool _waitingForFrame = true;
+	private volatile bool _disposed = false;
+
 
 	public AnesSdlRenderer(Nes nes, SdlRenderer renderer)
 	{
@@ -29,10 +32,22 @@ public sealed class AnesSdlRenderer : IDisposable
 		_screen = SdlTexture.CreateWithProperties(_renderer, tilesTexProps);
 		_screen.SetScaleMode(SdlScaleMode.Nearest);
 		tilesTexProps.Destroy();
+
+		_nes.FrameReady += OnFrameReady;
+	}
+
+	private void OnFrameReady(object? sender, EventArgs e)
+	{
+		_waitingForFrame = false;
+		while (!_waitingForFrame && !_disposed) { }
 	}
 
 	public void Render()
 	{
+		while (_waitingForFrame && !_disposed) { }
+		if (_disposed)
+			return;
+
 		var surface = _screen.LockToSurface();
 		for (var y = 0; y < Ppu.PictureHeight; y++)
 		{
@@ -45,6 +60,8 @@ public sealed class AnesSdlRenderer : IDisposable
 		var srcRect = new RectangleF(0, _screenOffsetTop, ScreenWidth, ScreenHeight);
 
 		_screen.Render(srcRect, RectangleF.Empty);
+
+		_waitingForFrame = true;
 	}
 
 	public static void SetRuntimeImportResolver() => NativeLibrary.SetDllImportResolver(typeof(SdlApp).Assembly, SdlImportResolver);
@@ -75,6 +92,7 @@ public sealed class AnesSdlRenderer : IDisposable
 
 	public void Dispose()
 	{
+		_disposed = true;
 		_screen.Destroy();
 	}
 }

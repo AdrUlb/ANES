@@ -6,24 +6,27 @@ namespace ANES.Platform.Windows;
 
 public partial class MainWindow : Form
 {
-	private readonly Thread _emuThread;
+	private readonly Thread _renderThread;
 
 	private readonly Nes _nes = new();
 	private SdlRenderer _sdlRenderer = null!;
 	private AnesSdlRenderer _anesRenderer = null!;
 
-	private volatile bool _keepRunning = true;
+	private volatile bool _quit = false;
 
-	private volatile bool _waitingForFrame = true;
 	public MainWindow()
 	{
+		DoubleBuffered = true;
+
 		AnesSdlRenderer.SetRuntimeImportResolver();
 
 		InitializeComponent();
 
-		_nes.FrameReady += OnFrameReady;
+		_nes.Start();
+		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\pacman.nes");
+		_nes.Reset();
 
-		_emuThread = new(ThreadProc);
+		_renderThread = new(RenderProc);
 
 		SetScale(3);
 	}
@@ -45,7 +48,7 @@ public partial class MainWindow : Form
 	{
 		_sdlRenderer = SdlRenderer.Create(sdlControl.SdlWindow);
 		_anesRenderer = new(_nes, _sdlRenderer);
-		_emuThread.Start();
+		_renderThread.Start();
 	}
 
 	protected override void OnKeyDown(KeyEventArgs e)
@@ -110,38 +113,25 @@ public partial class MainWindow : Form
 		}
 	}
 
-	private void OnFrameReady(object? sender, EventArgs e)
+	private void RenderProc()
 	{
-		_waitingForFrame = false;
-
-		while (!_waitingForFrame && _keepRunning) { }
-	}
-
-	private void ThreadProc()
-	{
-		_nes.Start();
-		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\smb1.nes");
-		_nes.Reset();
-
-		while (_keepRunning)
+		while (!_quit)
 		{
-			while (_waitingForFrame && _keepRunning) { }
 			_sdlRenderer.SetDrawColor(Color.Black);
 			_sdlRenderer.Clear();
 			_anesRenderer.Render();
 			_sdlRenderer.Present();
-			_waitingForFrame = true;
 		}
-
-		_nes.Stop();
 	}
 
 	protected override void OnClosed(EventArgs e)
 	{
-		_keepRunning = false;
-		SpinWait.SpinUntil(() => !_emuThread.IsAlive);
-
+		_anesRenderer.Dispose();
 		_sdlRenderer.Destroy();
+		_quit = true;
+		SpinWait.SpinUntil(() => !_renderThread.IsAlive);
+
+		_nes.Stop();
 
 		base.OnClosed(e);
 	}
