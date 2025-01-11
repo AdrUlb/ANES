@@ -5,6 +5,12 @@ namespace ANES;
 
 internal sealed class Nes : Computer
 {
+	private const double _masterTicksPerSecond = 236250000.0 / 11.0;
+	private const double _ppuTicksPerSecond = _masterTicksPerSecond / 4.0;
+	private const double _framesPerSecond = 60.0;
+	private const double _millisPerFrame = 1000.0 / _framesPerSecond;
+	private const double _ppuTicksPerFrame = _ppuTicksPerSecond / _framesPerSecond;
+
 	private readonly Thread _thread;
 	private readonly object _startStopLock = new();
 	private bool _keepRunning = false;
@@ -31,6 +37,17 @@ internal sealed class Nes : Computer
 		PpuBus = new PpuBus(this);
 		Ppu = new(this);
 		_cpu = new(this);
+
+		Ppu.Vblank += VblankHandler;
+	}
+
+	private void VblankHandler(object? sender, PpuVblankEventArgs e)
+	{
+		if (e.Nmi)
+			_cpu.RaiseNmi();
+
+		if (e.Frame)
+			Vblank?.Invoke(this, EventArgs.Empty);
 	}
 
 	public void InsertCartridge(string romFilePath)
@@ -52,28 +69,34 @@ internal sealed class Nes : Computer
 
 	private void ThreadProc()
 	{
-		// Ticks = PPU dots
 		ulong tick = 0;
+		double ticks = 0;
 		var start = Stopwatch.StartNew();
+
+		double timestamp = Stopwatch.GetTimestamp();
 
 		while (_keepRunning)
 		{
-			Ppu.Tick();
+			timestamp += Stopwatch.Frequency / _framesPerSecond;
 
-			if (Ppu.HandleNmi())
+			while (ticks < _ppuTicksPerFrame)
 			{
-				_cpu.RaiseNmi();
-				Vblank?.Invoke(this, EventArgs.Empty);
+				Ppu.Tick();
+
+				if (tick % 4 == 0)
+				{
+					_cpu.Tick();
+					// NOTE: signal IRQs AFTER CPU tick
+					// maybe NMIs before?
+				}
+
+				tick++;
+				ticks++;
 			}
 
-			if (tick % 4 == 0)
-			{
-				_cpu.Tick();
-				// NOTE: signal IRQs AFTER CPU tick
-				// maybe NMIs before?
-			}
+			ticks -= _ppuTicksPerFrame;
 
-			tick++;
+			while (Stopwatch.GetTimestamp() < timestamp) { }
 		}
 	}
 

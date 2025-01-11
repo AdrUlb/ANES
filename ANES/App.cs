@@ -27,8 +27,6 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 	{
 		_waitingForVblank = false;
 
-		/*bool WaitingForVblank() => _waitingForVblank || _quit;
-		SpinWait.SpinUntil(WaitingForVblank);*/
 		while (!_waitingForVblank && !_quit) { }
 	}
 
@@ -61,8 +59,6 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 
 	protected override SdlAppResult Iterate()
 	{
-		/*bool NotWaitingForVblank() => !_waitingForVblank || _quit;
-		SpinWait.SpinUntil(NotWaitingForVblank);*/
 		while (_waitingForVblank && !_quit) { }
 
 		var surface = _screen.LockToSurface();
@@ -73,7 +69,6 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 				row[x] = _nes.Ppu.Picture[x + y * Ppu.PictureWidth].ToArgb();
 		}
 		_screen.Unlock();
-		_waitingForVblank = true;
 
 		var srcRect = new RectangleF(0, _screenOffsetTop, _screenWidth, _screenHeight);
 
@@ -81,6 +76,7 @@ public sealed class App() : SdlApp(SdlInitFlags.Video)
 		_screen.Render(srcRect, RectangleF.Empty);
 		_renderer.Present();
 
+		_waitingForVblank = true;
 		return SdlAppResult.Continue;
 	}
 

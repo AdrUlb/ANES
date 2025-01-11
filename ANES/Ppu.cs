@@ -11,6 +11,12 @@ namespace ANES;
 // https://www.nesdev.org/wiki/PPU_sprite_evaluation
 // https://www.nesdev.org/w/images/default/4/4f/Ppu.svg
 
+internal sealed class PpuVblankEventArgs(bool frame, bool nmi) : EventArgs
+{
+	public readonly bool Frame = frame;
+	public readonly bool Nmi = nmi;
+}
+
 internal sealed class Ppu(Nes nes)
 {
 	internal const int PictureWidth = 256;
@@ -43,8 +49,6 @@ internal sealed class Ppu(Nes nes)
 	private int _scanline = 261;
 	private int _cycle = 0;
 
-	private bool _raiseNmi = false;
-
 	private ushort _regV;
 	private ushort _regT;
 	private byte _regX;
@@ -66,6 +70,8 @@ internal sealed class Ppu(Nes nes)
 	private int _pictureIndex = 0;
 
 	private bool IsRenderingEnabled => _maskEnableBackground || _maskEnableSprites;
+
+	public event EventHandler<PpuVblankEventArgs>? Vblank;
 
 	public byte ReadReg(int index, bool suppressSideEffects = false)
 	{
@@ -122,7 +128,7 @@ internal sealed class Ppu(Nes nes)
 
 				// Changing NMI enable from 0 to 1 while the vblank flag in PPUSTATUS is 1 will immediately trigger an NMI.
 				if (!prevNmiEnable && _ctrlVblankNmiEnable && _statusVblank)
-					_raiseNmi = true;
+					Vblank.Invoke(this, new(false, true));
 
 				break;
 			case 1: // PPUMASK
@@ -214,15 +220,6 @@ internal sealed class Ppu(Nes nes)
 		}
 	}
 
-	public bool HandleNmi()
-	{
-		if (!_raiseNmi)
-			return false;
-
-		_raiseNmi = false;
-		return true;
-	}
-
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private void DoCycle()
 	{
@@ -235,8 +232,7 @@ internal sealed class Ppu(Nes nes)
 			// Set Vblank flag
 			_statusVblank = true;
 
-			if (_ctrlVblankNmiEnable)
-				_raiseNmi = true;
+			Vblank?.Invoke(this, new(true, _ctrlVblankNmiEnable));
 
 			return;
 		}
