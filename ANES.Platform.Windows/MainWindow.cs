@@ -51,14 +51,14 @@ public partial class MainWindow : Form
 
 	private void ThreadProc()
 	{
-		_nes.Start();
 		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\pacman.nes");
+		_nes.Start();
 		_nes.Reset();
 
 		while (_keepRunning)
 		{
 			while (_waitingForFrame && _keepRunning) { }
-			_sdlRenderer.SetDrawColor(Color.Orange);
+			_sdlRenderer.SetDrawColor(Color.Black);
 			_sdlRenderer.Clear();
 			_anesRenderer.Render();
 			_sdlRenderer.Present();
