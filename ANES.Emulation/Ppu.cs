@@ -117,8 +117,6 @@ public sealed class Ppu(Nes nes)
 			case 7: // PPUDATA
 				{
 					// Note that while the v register has 15 bits, the PPU memory space is only 14 bits wide. The highest bit is unused for access through $2007.
-					// TODO: During rendering (on the pre-render line and the visible lines 0-239, provided either background or sprite rendering is enabled),
-					//	it will update v in an odd way, triggering a coarse X increment and a Y increment simultaneously (with normal wrapping behavior).
 					ret = _dataReadBuffer;
 					_dataReadBuffer = nes.PpuBus.ReadByte((ushort)(_regV & 0b111111_11111111));
 					if (!suppressSideEffects)
@@ -285,13 +283,6 @@ public sealed class Ppu(Nes nes)
 		if (_scanline is > 239 and < 261)
 			return;
 
-		// Cycles 257-320: Sprite fetches (8 sprites total, 8 cycles per sprite)
-		// TODO: this is a hack!
-		if (_cycle == 257)
-		{
-			FetchSprites();
-		}
-
 		// This should be accurate enough?
 		if (_cycle == 64)
 		{
@@ -304,77 +295,87 @@ public sealed class Ppu(Nes nes)
 			_sprite0Copied = false;
 		}
 
-		// Cycles 65-256: Sprite evaluation
-		if (_scanline != 261 && _cycle is >= 65 and <= 256 && IsRenderingEnabled)
+		if (_scanline != 261)
 		{
+			// Cycles 65-256: Sprite evaluation
+			if (_cycle is >= 65 and <= 256 && IsRenderingEnabled)
+			{
 
-			if (_cycle % 2 == 1) // On odd cycles, data is read from (primary) OAM
-			{
-				_spriteByte = Oam[_spriteN * 4 + _spriteM];
-			}
-			else // On even cycles, data is written to secondary OAM (unless secondary OAM is full, in which case it will read the value in secondary OAM instead)
-			{
-				switch (_spriteEvalStep)
+				if (_cycle % 2 == 1) // On odd cycles, data is read from (primary) OAM
 				{
-					case 1:
-						{
-							// 1. Starting at n = 0, read a sprite's Y-coordinate (OAM[n][0], copying it to the next open slot in secondary OAM
-							// 1a. If Y-coordinate is in range, copy remaining bytes of sprite data (OAM[n][1] thru OAM[n][3]) into secondary OAM.
-
-							// Always copy the read byte into secondary OAM
-							_secondaryOam[_spriteCount * 4 + _spriteM] = _spriteByte;
-
-							var inRange = _spriteByte <= _scanline && _spriteByte + 8 > _scanline;
-
-							// If this was the last byte of the sprite
-							if (_spriteM == 3)
+					_spriteByte = Oam[_spriteN * 4 + _spriteM];
+				}
+				else // On even cycles, data is written to secondary OAM (unless secondary OAM is full, in which case it will read the value in secondary OAM instead)
+				{
+					switch (_spriteEvalStep)
+					{
+						case 1:
 							{
-								if (_spriteN == 0)
-									_sprite0Copied = true;
+								// 1. Starting at n = 0, read a sprite's Y-coordinate (OAM[n][0], copying it to the next open slot in secondary OAM
+								// 1a. If Y-coordinate is in range, copy remaining bytes of sprite data (OAM[n][1] thru OAM[n][3]) into secondary OAM.
 
-								_spriteM = 0;
-								_spriteCount++;
+								// Always copy the read byte into secondary OAM
+								_secondaryOam[_spriteCount * 4 + _spriteM] = _spriteByte;
+
+								var inRange = _spriteByte <= _scanline && _spriteByte + 8 > _scanline;
+
+								// If this was the last byte of the sprite
+								if (_spriteM == 3)
+								{
+									if (_spriteN == 0)
+										_sprite0Copied = true;
+
+									_spriteM = 0;
+									_spriteCount++;
+								}
+								else if (_spriteM != 0 || inRange)
+								{
+									_spriteM++;
+									break;
+								}
+
+								goto case 2;
 							}
-							else if (_spriteM != 0 || inRange)
+						case 2:
+							// 2. Increment n
+							_spriteN++;
+
+							// 2a. If n has overflowed back to zero (all 64 sprites evaluated), go to 4
+							if (_spriteN >= 64)
 							{
-								_spriteM++;
+								_spriteN %= 64;
+								_spriteEvalStep = 4;
 								break;
 							}
 
-							goto case 2;
-						}
-					case 2:
-						// 2. Increment n
-						_spriteN++;
+							// 2b. If less than 8 sprites have been found, go to 1
+							if (_spriteCount < 8)
+							{
+								_spriteEvalStep = 1;
+								break;
+							}
 
-						// 2a. If n has overflowed back to zero (all 64 sprites evaluated), go to 4
-						if (_spriteN >= 64)
-						{
-							_spriteN %= 64;
-							_spriteEvalStep = 4;
+							// 2c. If exactly 8 sprites have been found, disable writes to secondary OAM because it is full. This causes sprites in back to drop out.
+							_spriteEvalStep = 3;
 							break;
-						}
-
-						// 2b. If less than 8 sprites have been found, go to 1
-						if (_spriteCount < 8)
-						{
-							_spriteEvalStep = 1;
+						case 3: // TODO
+								// 3. Starting at m = 0, evaluate OAM[n][m] as a Y-coordinate.
+								// 3a. If the value is in range, set the sprite overflow flag in $2002 and read the next 3 entries of OAM (incrementing 'm' after each byte and incrementing 'n' when 'm' overflows); if m = 3, increment n
+								// 3b. If the value is not in range, increment n and m (without carry). If n overflows to 0, go to 4; otherwise go to 3
+								//	The m increment is a hardware bug - if only n was incremented, the overflow flag would be set whenever more than 8 sprites were present on the same scanline, as expected.
 							break;
-						}
-
-						// 2c. If exactly 8 sprites have been found, disable writes to secondary OAM because it is full. This causes sprites in back to drop out.
-						_spriteEvalStep = 3;
-						break;
-					case 3: // TODO
-							// 3. Starting at m = 0, evaluate OAM[n][m] as a Y-coordinate.
-							// 3a. If the value is in range, set the sprite overflow flag in $2002 and read the next 3 entries of OAM (incrementing 'm' after each byte and incrementing 'n' when 'm' overflows); if m = 3, increment n
-							// 3b. If the value is not in range, increment n and m (without carry). If n overflows to 0, go to 4; otherwise go to 3
-							//	The m increment is a hardware bug - if only n was incremented, the overflow flag would be set whenever more than 8 sprites were present on the same scanline, as expected.
-						break;
-					case 4:
-						// 4. Attempt (and fail) to copy OAM[n][0] into the next free slot in secondary OAM, and increment n (repeat until HBLANK is reached)
-						break;
+						case 4:
+							// 4. Attempt (and fail) to copy OAM[n][0] into the next free slot in secondary OAM, and increment n (repeat until HBLANK is reached)
+							break;
+					}
 				}
+			}
+
+			// Cycles 257-320: Sprite fetches (8 sprites total, 8 cycles per sprite)
+			// TODO: this is a hack!
+			if (_cycle == 257)
+			{
+				FetchSprites();
 			}
 		}
 
@@ -383,18 +384,16 @@ public sealed class Ppu(Nes nes)
 			_regOamAddr = 0;
 
 		if (_scanline != 261 && _cycle is >= 1 and <= 256)
-		{
 			OutputDot();
+
+		if (_cycle is >= 1 and <= 336)
+		{
+			_bgPatternLowShifter <<= 1;
+			_bgPatternHighShifter <<= 1;
 		}
 
 		if (_cycle is (>= 1 and <= 256) or >= 321 && IsRenderingEnabled)
 		{
-			if (_cycle is >= 1 and <= 336)
-			{
-				_bgPatternLowShifter <<= 1;
-				_bgPatternHighShifter <<= 1;
-			}
-
 			// https://www.nesdev.org/wiki/PPU_scrolling#Tile_and_attribute_fetching
 			// The data for each tile is fetched during this phase. Each memory access takes 2 PPU cycles to complete, and 4 must be performed per tile
 			// The data fetched from these accesses is placed into internal latches, and then fed to the appropriate shift registers when it's time to do so (every 8 cycles).
@@ -460,6 +459,7 @@ public sealed class Ppu(Nes nes)
 
 						_bgPatternLowShifter |= _bgPatternLowFetch;
 						_bgPatternHighShifter |= _bgPatternHighFetch;
+
 						IncrementCoarseX();
 					}
 					break;

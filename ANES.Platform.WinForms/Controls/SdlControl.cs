@@ -57,7 +57,8 @@ internal partial class SdlControl : Control
 
 	protected override void OnSizeChanged(EventArgs e)
 	{
-		SdlWindow?.SetSize(Width, Height > 0 ? Height : 1);
+		if (Width > 0 && Height > 0)
+			SdlWindow?.SetSize(Width, Height);
 		base.OnSizeChanged(e);
 	}
 

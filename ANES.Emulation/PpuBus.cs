@@ -28,11 +28,6 @@ public sealed class PpuBus(Nes nes) : MemoryBus
 	public override void WriteByte(ushort address, byte value)
 	{
 		// The PPU addresses a 14-bit (16kB) address space, $0000-$3FFF, completely separate from the CPU's address bus.
-		if (address >= 0x4000)
-		{
-			Console.WriteLine($"{address:X4} = {value:X2}");
-		}
-		
 		address %= 0x4000;
 
 		// $3F00-3FFF is not configurable, always mapped to the internal palette control.
@@ -46,9 +41,9 @@ public sealed class PpuBus(Nes nes) : MemoryBus
 				address = 0;
 
 			nes.PaletteRam[address] = value;
+			return;
 		}
 
 		nes.Cartridge?.PpuWriteByte(address, value);
-
 	}
 }

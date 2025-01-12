@@ -4,7 +4,7 @@ namespace ANES.Emulation;
 
 public sealed class Cartridge
 {
-	public readonly IMapper _mapper;
+	private readonly IMapper _mapper;
 
 	public Cartridge(Nes nes, string romFilePath)
 	{

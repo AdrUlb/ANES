@@ -1,6 +1,6 @@
 namespace ANES.Emulation.Mappers;
 
-public sealed class Mapper0 : IMapper
+internal sealed class Mapper0 : IMapper
 {
 	private readonly Nes _nes;
 
@@ -28,8 +28,8 @@ public sealed class Mapper0 : IMapper
 
 		_chrRam = chrRamBytes != 0;
 
-		if ((!_chrRam && chrRom.Length != 8 * 1024) || (_chrRam && chrRamBytes != 8 * 1024))
-			throw new FormatException("NROM only supports 8K CHR RAM/RAM.");
+		if ((!_chrRam && chrRom.Length < 8 * 1024) || (_chrRam && chrRamBytes < 8 * 1024))
+			throw new FormatException("NROM requires 8K CHR ROM/RAM.");
 
 		_nes = nes;
 		_prgRom = prgRom;
