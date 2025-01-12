@@ -47,8 +47,8 @@ public sealed class Nes : Computer
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static unsafe void WaitUntil(Func<bool> predicate)
 	{
-		//while (!predicate()) { }
-		SpinWait.SpinUntil(predicate);
+		while (!predicate()) { }
+		//SpinWait.SpinUntil(predicate);
 	}
 
 	private void VblankHandler(object? sender, PpuVblankEventArgs e)

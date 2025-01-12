@@ -20,6 +20,8 @@ public partial class MainWindow : Form
 
 	public MainWindow()
 	{
+		SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
+
 		AnesSdlRenderer.SetRuntimeImportResolver();
 
 		InitializeComponent();

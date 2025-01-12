@@ -10,12 +10,8 @@ internal class MyToolStripRenderer : ToolStripRenderer
 	{
 		Rectangle bounds = e.AffectedBounds;
 
-		if (e.ToolStrip.IsDropDown)
-		{
-			using Brush backBrush = new SolidBrush(e.BackColor);
-			e.Graphics.FillRectangle(backBrush, bounds);
-		}
-
+		var backBrush = SystemBrushes.MenuBar;
+		e.Graphics.FillRectangle(backBrush, bounds);
 		base.OnRenderToolStripBackground(e);
 	}
 

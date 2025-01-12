@@ -8,7 +8,6 @@ internal partial class SdlControl : Control
 	private const int SWP_NOSIZE = 0x0001;
 	private const int SWP_NOZORDER = 0x0004;
 	private const int SWP_FRAMECHANGED = 0x0020;
-	private const int SWP_NOOWNERZORDER = 0x0200;
 
 	[LibraryImport("user32")]
 	private static partial nint SetWindowPos(nint hwnd, nint handleInsertAfter, int x, int y, int cx, int cy, uint uFlags);
@@ -34,9 +33,8 @@ internal partial class SdlControl : Control
 		BackColor = Color.Black;
 		SetStyle(ControlStyles.UserPaint, true);
 		SetStyle(ControlStyles.AllPaintingInWmPaint, true);
+		SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
 		SetStyle(ControlStyles.Selectable, false);
-		SetStyle(ControlStyles.ResizeRedraw, false);
-		SetStyle(ControlStyles.OptimizedDoubleBuffer, false);
 	}
 
 	protected override void CreateHandle()
@@ -51,7 +49,7 @@ internal partial class SdlControl : Control
 			_sdlWindowHandle = props.Get(SdlProperties.WindowWin32Hwnd, 0);
 			SetWindowLongPtrA(_sdlWindowHandle, GWL_STYLE, WS_CHILD | WS_VISIBLE);
 			SetParent(_sdlWindowHandle, Handle);
-			SetWindowPos(_sdlWindowHandle, 0, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOSIZE | SWP_NOOWNERZORDER | SWP_NOZORDER);
+			SetWindowPos(_sdlWindowHandle, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
 		}
 	}
 

@@ -7,8 +7,7 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<OutputType>Exe</OutputType>
-		<OutputType Condition="$(IsPublishing)">WinExe</OutputType>
+		<OutputType>WinExe</OutputType>
 		<TargetFramework>net9.0-windows</TargetFramework>
 		<AssemblyName>ANES</AssemblyName>
 		<Nullable>enable</Nullable>
