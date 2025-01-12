@@ -63,4 +63,8 @@
 	  <ProjectReference Include="..\ANES.Rendering.Sdl3\ANES.Rendering.Sdl3.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <PackageReference Include="WinFormsComInterop" Version="0.5.0" />
+	</ItemGroup>
+
 </Project>

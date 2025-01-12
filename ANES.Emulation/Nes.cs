@@ -40,6 +40,16 @@ public sealed class Nes : Computer
 		Ppu.Vblank += VblankHandler;
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static unsafe void WaitUntil(Func<bool> predicate)
+	{
+#if !DEBUG
+		SpinWait.SpinUntil(predicate);
+#else
+		while (!predicate()) { }
+#endif
+	}
+
 	private void VblankHandler(object? sender, PpuVblankEventArgs e)
 	{
 		if (e.Nmi)
@@ -86,7 +96,7 @@ public sealed class Nes : Computer
 				{
 					_cpu.Tick();
 					// NOTE: signal IRQs AFTER CPU tick
-					// maybe NMIs before?
+					// maybe NMIs before?c
 				}
 
 				tick++;
@@ -99,8 +109,10 @@ public sealed class Nes : Computer
 			var millisecondsTaken = _millisPerFrame - millisecondsToSpare;
 			Console.WriteLine($"Emulated frame took {millisecondsTaken:0.00}ms ({millisecondsToSpare:0.00}ms to spare)");
 
-			while (Stopwatch.GetTimestamp() < timestamp) { }
+			WaitUntil(NextFrame);
 		}
+
+		bool NextFrame() => Stopwatch.GetTimestamp() >= timestamp;
 	}
 
 	/// <summary>
@@ -124,7 +136,7 @@ public sealed class Nes : Computer
 		lock (_startStopLock)
 		{
 			_keepRunning = false;
-			SpinWait.SpinUntil(() => !_thread?.IsAlive ?? true);
+			WaitUntil(() => !_thread?.IsAlive ?? true);
 		}
 	}
 

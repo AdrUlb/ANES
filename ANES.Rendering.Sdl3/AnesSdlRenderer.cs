@@ -8,7 +8,7 @@ namespace ANES.Rendering.Sdl3;
 public sealed class AnesSdlRenderer : IDisposable
 {
 	private readonly Nes _nes;
-	private const bool _palResolution = true;
+	private const bool _palResolution = false;
 	private const int _screenOffsetTop = _palResolution ? 0 : 8;
 	public const int ScreenWidth = 256;
 	public const int ScreenHeight = _palResolution ? 240 : 224;
@@ -39,12 +39,15 @@ public sealed class AnesSdlRenderer : IDisposable
 	private void OnFrameReady(object? sender, EventArgs e)
 	{
 		_waitingForFrame = false;
-		while (!_waitingForFrame && !_disposed) { }
+		Nes.WaitUntil(FrameRendered);
+
+		bool FrameRendered() => _waitingForFrame || _disposed;
 	}
 
 	public void Render()
 	{
-		while (_waitingForFrame && !_disposed) { }
+		Nes.WaitUntil(FrameReady);
+
 		if (_disposed)
 			return;
 
@@ -62,6 +65,8 @@ public sealed class AnesSdlRenderer : IDisposable
 		_screen.Render(srcRect, RectangleF.Empty);
 
 		_waitingForFrame = true;
+
+		bool FrameReady() => !_waitingForFrame || _disposed;
 	}
 
 	public static void SetRuntimeImportResolver() => NativeLibrary.SetDllImportResolver(typeof(SdlApp).Assembly, SdlImportResolver);
