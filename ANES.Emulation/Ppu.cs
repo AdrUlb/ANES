@@ -220,7 +220,6 @@ public sealed class Ppu(Nes nes)
 		}
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private void DoCycle()
 	{
 		// Vblank flag is set on scanline 241, cycle 1
@@ -360,8 +359,7 @@ public sealed class Ppu(Nes nes)
 			}
 		}
 	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	
 	private void OutputDot()
 	{
 		var patternLow = (_bgPatternLowShifter >> (16 - 1 - _regX)) & 1;
@@ -385,7 +383,6 @@ public sealed class Ppu(Nes nes)
 		Picture[_pictureIndex++] = Color.FromArgb(_palette[paletteIndex * 3 + 0], _palette[paletteIndex * 3 + 1], _palette[paletteIndex * 3 + 2]);
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private void DrawSprites()
 	{
 		for (var i = 0; i < 64; i++)
@@ -448,7 +445,6 @@ public sealed class Ppu(Nes nes)
 		}
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private void IncrementCoarseX()
 	{
 		// The coarse X component of v needs to be incremented when the next tile is reached. Bits 0-4 are incremented, with overflow toggling bit 10.
@@ -462,7 +458,6 @@ public sealed class Ppu(Nes nes)
 			_regV++; // increment coarse X
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private void IncrementY()
 	{
 		if ((_regV & 0x7000) != 0x7000) // If fine Y < 7

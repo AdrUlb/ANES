@@ -1,20 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
+		<IsPublishing>false</IsPublishing>
+		<IsPublishing Condition="'$(_IsPublishing)'!=''">true</IsPublishing>
+		<DefineConstants Condition="$(IsPublishing)">PUBLISH;$(DefineConstants)</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup>
 		<OutputType>Exe</OutputType>
+		<OutputType Condition="$(IsPublishing)">WinExe</OutputType>
 		<TargetFramework>net9.0-windows</TargetFramework>
 		<AssemblyName>ANES</AssemblyName>
 		<Nullable>enable</Nullable>
 		<UseWindowsForms>true</UseWindowsForms>
-		<_SuppressWinFormsTrimError>true</_SuppressWinFormsTrimError>
 		<ImplicitUsings>enable</ImplicitUsings>
-	</PropertyGroup>
-
-	<PropertyGroup>
-		<!-- Detect when publishing -->
-		<IsPublishing>false</IsPublishing>
-		<IsPublishing Condition="'$(_IsPublishing)'!=''">true</IsPublishing>
-		<DefineConstants Condition="$(IsPublishing)">PUBLISH;$(DefineConstants)</DefineConstants>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -30,7 +29,8 @@
 		</Content>
 	</ItemGroup>
 
-	<PropertyGroup>
+	<PropertyGroup Condition="$(IsPublishing)">
+		<_SuppressWinFormsTrimError>true</_SuppressWinFormsTrimError>
 		<PublishAot>true</PublishAot>
 		<PublishTrimmed>true</PublishTrimmed>
 		<TrimMode>full</TrimMode>
@@ -38,7 +38,7 @@
 		<IlcInstructionSet>avx2,bmi2,fma,pclmul,popcnt,aes</IlcInstructionSet>
 	</PropertyGroup>
 
-	<ItemGroup>
+	<ItemGroup Condition="$(IsPublishing)">
 		<!-- Generate direct PInvoke calls for everything in __Internal -->
 		<!-- This option replicates Mono AOT behavior that generates direct PInvoke calls for __Internal -->
 		<DirectPInvoke Include="__Internal" Visible="false" />
@@ -50,7 +50,7 @@
 		<NativeLibrary Include="..\NativeLibs\linux-x64\libSDL3.a" Condition="'$(RuntimeIdentifier)'=='linux-x64'" Visible="false" />
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(RuntimeIdentifier)'=='win-x64'">
+	<ItemGroup Condition="'$(IsPublishing)|$(RuntimeIdentifier)'=='true|win-x64'">
 		<NativeLibrary Include="..\NativeLibs\win-x64\SDL3-3.1.8\SDL3.lib" Visible="false" />
 		<NativeLibrary Include="gdi32.lib" Visible="false" />
 		<NativeLibrary Include="imm32.lib" Visible="false" />

@@ -22,10 +22,6 @@ public partial class MainWindow : Form
 
 		InitializeComponent();
 
-		_nes.Start();
-		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\pacman.nes");
-		_nes.Reset();
-
 		_renderThread = new(RenderProc);
 
 		SetScale(3);
@@ -127,13 +123,32 @@ public partial class MainWindow : Form
 	protected override void OnClosed(EventArgs e)
 	{
 		_quit = true;
+		_anesRenderer.Dispose();
 		SpinWait.SpinUntil(() => !_renderThread.IsAlive);
 
-		_anesRenderer.Dispose();
 		_sdlRenderer.Destroy();
 
 		base.OnClosed(e);
 
 		_nes.Stop();
+	}
+
+	private void mainMenuExit_Click(object sender, EventArgs e)
+	{
+		Close();
+	}
+
+	private void mainMenuOpen_Click(object sender, EventArgs e)
+	{
+		var result = romOpenFIleDialog.ShowDialog();
+
+		if (result != DialogResult.OK)
+			return;
+
+		_nes.Stop();
+		var romFile = romOpenFIleDialog.FileName;
+		_nes.InsertCartridge(romFile);
+		_nes.Start();
+		_nes.Reset();
 	}
 }

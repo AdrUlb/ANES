@@ -11,7 +11,7 @@ public sealed class Nes : Computer
 	private const double _millisPerFrame = 1000.0 / _framesPerSecond;
 	private const double _ppuTicksPerFrame = _ppuTicksPerSecond / _framesPerSecond;
 
-	private readonly Thread _thread;
+	private Thread? _thread;
 	private readonly object _startStopLock = new();
 	private bool _keepRunning = false;
 
@@ -32,7 +32,6 @@ public sealed class Nes : Computer
 
 	public Nes()
 	{
-		_thread = new(ThreadProc);
 		CpuBus = new CpuBus(this);
 		PpuBus = new PpuBus(this);
 		Ppu = new(this);
@@ -96,6 +95,10 @@ public sealed class Nes : Computer
 
 			ticks -= _ppuTicksPerFrame;
 
+			var millisecondsToSpare = (timestamp - Stopwatch.GetTimestamp()) * 1000.0 / Stopwatch.Frequency;
+			var millisecondsTaken = _millisPerFrame - millisecondsToSpare;
+			Console.WriteLine($"Emulated frame took {millisecondsTaken:0.00}ms ({millisecondsToSpare:0.00}ms to spare)");
+
 			while (Stopwatch.GetTimestamp() < timestamp) { }
 		}
 	}
@@ -107,6 +110,7 @@ public sealed class Nes : Computer
 	{
 		lock (_startStopLock)
 		{
+			_thread = new(ThreadProc);
 			_keepRunning = true;
 			_thread.Start();
 		}
@@ -120,7 +124,7 @@ public sealed class Nes : Computer
 		lock (_startStopLock)
 		{
 			_keepRunning = false;
-			SpinWait.SpinUntil(() => !_thread.IsAlive);
+			SpinWait.SpinUntil(() => !_thread?.IsAlive ?? true);
 		}
 	}
 

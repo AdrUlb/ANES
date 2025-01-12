@@ -31,14 +31,15 @@ partial class MainWindow
 	private void InitializeComponent()
 	{
 		sdlControl = new SdlControl();
-		menuStrip1 = new MyMenuStrip();
+		mainMenu = new MyMenuStrip();
 		fileToolStripMenuItem = new ToolStripMenuItem();
-		openToolStripMenuItem = new ToolStripMenuItem();
+		mainMenuOpen = new ToolStripMenuItem();
 		toolStripMenuItem1 = new ToolStripSeparator();
-		exitToolStripMenuItem = new ToolStripMenuItem();
+		mainMenuExit = new ToolStripMenuItem();
 		helpToolStripMenuItem = new ToolStripMenuItem();
-		aboutToolStripMenuItem = new ToolStripMenuItem();
-		menuStrip1.SuspendLayout();
+		mainMenuAbout = new ToolStripMenuItem();
+		romOpenFIleDialog = new OpenFileDialog();
+		mainMenu.SuspendLayout();
 		SuspendLayout();
 		// 
 		// sdlControl
@@ -50,53 +51,62 @@ partial class MainWindow
 		sdlControl.Size = new Size(320, 216);
 		sdlControl.TabIndex = 0;
 		// 
-		// menuStrip1
+		// mainMenu
 		// 
-		menuStrip1.BackColor = SystemColors.MenuBar;
-		menuStrip1.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, helpToolStripMenuItem });
-		menuStrip1.Location = new Point(0, 0);
-		menuStrip1.Name = "menuStrip1";
-		menuStrip1.Padding = new Padding(0);
-		menuStrip1.Size = new Size(320, 24);
-		menuStrip1.TabIndex = 1;
-		menuStrip1.Text = "menuStrip1";
+		mainMenu.BackColor = SystemColors.MenuBar;
+		mainMenu.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, helpToolStripMenuItem });
+		mainMenu.Location = new Point(0, 0);
+		mainMenu.Name = "mainMenu";
+		mainMenu.Padding = new Padding(0);
+		mainMenu.Size = new Size(320, 24);
+		mainMenu.TabIndex = 1;
+		mainMenu.Text = "menuStrip1";
 		// 
 		// fileToolStripMenuItem
 		// 
-		fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { openToolStripMenuItem, toolStripMenuItem1, exitToolStripMenuItem });
+		fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { mainMenuOpen, toolStripMenuItem1, mainMenuExit });
 		fileToolStripMenuItem.Name = "fileToolStripMenuItem";
 		fileToolStripMenuItem.Size = new Size(37, 24);
 		fileToolStripMenuItem.Text = "&File";
 		// 
-		// openToolStripMenuItem
+		// mainMenuOpen
 		// 
-		openToolStripMenuItem.Name = "openToolStripMenuItem";
-		openToolStripMenuItem.Size = new Size(103, 22);
-		openToolStripMenuItem.Text = "&Open";
+		mainMenuOpen.Name = "mainMenuOpen";
+		mainMenuOpen.ShortcutKeys = Keys.Control | Keys.O;
+		mainMenuOpen.Size = new Size(180, 22);
+		mainMenuOpen.Text = "&Open";
+		mainMenuOpen.Click += mainMenuOpen_Click;
 		// 
 		// toolStripMenuItem1
 		// 
 		toolStripMenuItem1.Name = "toolStripMenuItem1";
-		toolStripMenuItem1.Size = new Size(100, 6);
+		toolStripMenuItem1.Size = new Size(177, 6);
 		// 
-		// exitToolStripMenuItem
+		// mainMenuExit
 		// 
-		exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-		exitToolStripMenuItem.Size = new Size(103, 22);
-		exitToolStripMenuItem.Text = "E&xit";
+		mainMenuExit.Name = "mainMenuExit";
+		mainMenuExit.ShortcutKeys = Keys.Control | Keys.Q;
+		mainMenuExit.Size = new Size(180, 22);
+		mainMenuExit.Text = "E&xit";
+		mainMenuExit.Click += mainMenuExit_Click;
 		// 
 		// helpToolStripMenuItem
 		// 
-		helpToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { aboutToolStripMenuItem });
+		helpToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { mainMenuAbout });
 		helpToolStripMenuItem.Name = "helpToolStripMenuItem";
 		helpToolStripMenuItem.Size = new Size(44, 24);
 		helpToolStripMenuItem.Text = "&Help";
 		// 
-		// aboutToolStripMenuItem
+		// mainMenuAbout
 		// 
-		aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-		aboutToolStripMenuItem.Size = new Size(107, 22);
-		aboutToolStripMenuItem.Text = "&About";
+		mainMenuAbout.Name = "mainMenuAbout";
+		mainMenuAbout.Size = new Size(107, 22);
+		mainMenuAbout.Text = "&About";
+		// 
+		// romOpenFIleDialog
+		// 
+		romOpenFIleDialog.DefaultExt = "nes";
+		romOpenFIleDialog.Filter = "NES files|*.nes";
 		// 
 		// MainWindow
 		// 
@@ -104,11 +114,11 @@ partial class MainWindow
 		AutoScaleMode = AutoScaleMode.Font;
 		ClientSize = new Size(320, 240);
 		Controls.Add(sdlControl);
-		Controls.Add(menuStrip1);
+		Controls.Add(mainMenu);
 		Name = "MainWindow";
 		Text = "ANES";
-		menuStrip1.ResumeLayout(false);
-		menuStrip1.PerformLayout();
+		mainMenu.ResumeLayout(false);
+		mainMenu.PerformLayout();
 		ResumeLayout(false);
 		PerformLayout();
 	}
@@ -116,11 +126,12 @@ partial class MainWindow
 	#endregion
 
 	private SdlControl sdlControl;
-	private MyMenuStrip menuStrip1;
+	private MyMenuStrip mainMenu;
 	private ToolStripMenuItem fileToolStripMenuItem;
-	private ToolStripMenuItem openToolStripMenuItem;
+	private ToolStripMenuItem mainMenuOpen;
 	private ToolStripSeparator toolStripMenuItem1;
-	private ToolStripMenuItem exitToolStripMenuItem;
+	private ToolStripMenuItem mainMenuExit;
 	private ToolStripMenuItem helpToolStripMenuItem;
-	private ToolStripMenuItem aboutToolStripMenuItem;
+	private ToolStripMenuItem mainMenuAbout;
+	private OpenFileDialog romOpenFIleDialog;
 }

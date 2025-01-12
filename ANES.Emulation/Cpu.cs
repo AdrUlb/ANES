@@ -1492,7 +1492,6 @@ internal sealed class Cpu(Computer computer)
 
 	#region Legal instructions
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstAdc()
 	{
 		var result = _regA + _internalOperand + (_flagCarry ? 1 : 0);
@@ -1506,7 +1505,6 @@ internal sealed class Cpu(Computer computer)
 		_regA = resultByte;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstAnd()
 	{
 		_regA &= _internalOperand;
@@ -1514,7 +1512,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _regA == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstAsl()
 	{
 		_flagCarry = ((_internalOperand >> 7) & 1) != 0;
@@ -1523,7 +1520,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _internalOperand == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstBit()
 	{
 		_flagNegative = ((_internalOperand >> 7) & 1) != 0;
@@ -1531,19 +1527,14 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = (_internalOperand & _regA) == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstClc() => _flagCarry = false;
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstCld() => _flagDecimal = false;
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstCli() => _flagInterruptDisable = false;
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstClv() => _flagOverflow = false;
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstCmp()
 	{
 		var result = _regA - _internalOperand;
@@ -1552,7 +1543,6 @@ internal sealed class Cpu(Computer computer)
 		_flagCarry = _regA >= _internalOperand;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstCpx()
 	{
 		var result = _regX - _internalOperand;
@@ -1561,7 +1551,6 @@ internal sealed class Cpu(Computer computer)
 		_flagCarry = _regX >= _internalOperand;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstCpy()
 	{
 		var result = _regY - _internalOperand;
@@ -1570,7 +1559,6 @@ internal sealed class Cpu(Computer computer)
 		_flagCarry = _regY >= _internalOperand;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstDec()
 	{
 		_internalOperand--;
@@ -1578,7 +1566,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _internalOperand == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstDex()
 	{
 		_regX--;
@@ -1586,7 +1573,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _regX == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstDey()
 	{
 		_regY--;
@@ -1594,7 +1580,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _regY == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstEor()
 	{
 		_regA ^= _internalOperand;
@@ -1602,7 +1587,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _regA == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstInc()
 	{
 		_internalOperand++;
@@ -1610,7 +1594,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _internalOperand == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstInx()
 	{
 		_regX++;
@@ -1618,7 +1601,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _regX == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstIny()
 	{
 		_regY++;
@@ -1626,7 +1608,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _regY == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstLda()
 	{
 		_regA = _internalOperand;
@@ -1634,7 +1615,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _regA == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstLdx()
 	{
 		_regX = _internalOperand;
@@ -1642,7 +1622,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _regX == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstLdy()
 	{
 		_regY = _internalOperand;
@@ -1650,7 +1629,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _regY == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstLsr()
 	{
 		_flagCarry = (_internalOperand & 1) != 0;
@@ -1659,10 +1637,8 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _internalOperand == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	static void ExecInstNop() { }
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstOra()
 	{
 		_regA |= _internalOperand;
@@ -1670,7 +1646,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _regA == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstRol()
 	{
 		var oldCarry = _flagCarry ? 1 : 0;
@@ -1681,7 +1656,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _internalOperand == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstRor()
 	{
 		var oldCarry = _flagCarry ? 1 : 0;
@@ -1692,7 +1666,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _internalOperand == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstSbc()
 	{
 		var op = _internalOperand;
@@ -1701,25 +1674,18 @@ internal sealed class Cpu(Computer computer)
 		_internalOperand = op;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstSec() => _flagCarry = true;
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstSed() => _flagDecimal = true;
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstSei() => _flagInterruptDisable = true;
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstSta() => _internalOperand = _regA;
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstStx() => _internalOperand = _regX;
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstSty() => _internalOperand = _regY;
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstTax()
 	{
 		_regX = _regA;
@@ -1727,7 +1693,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _regX == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstTay()
 	{
 		_regY = _regA;
@@ -1735,7 +1700,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _regY == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstTsx()
 	{
 		_regX = _regSpLow;
@@ -1743,7 +1707,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _regX == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstTxa()
 	{
 		_regA = _regX;
@@ -1751,10 +1714,8 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _regA == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstTxs() => _regSpLow = _regX;
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstTya()
 	{
 		_regA = _regY;
@@ -1766,7 +1727,6 @@ internal sealed class Cpu(Computer computer)
 
 	#region Illegal instructions
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstAlr()
 	{
 		ExecInstAnd();
@@ -1777,14 +1737,12 @@ internal sealed class Cpu(Computer computer)
 		_internalOperand = op;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstAnc()
 	{
 		ExecInstAnd();
 		_flagCarry = ((_regA >> 7) & 1) != 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstArr()
 	{
 		// In Binary mode (D flag clear), the instruction effectively does an AND between the accumulator and the immediate parameter
@@ -1805,21 +1763,18 @@ internal sealed class Cpu(Computer computer)
 		_flagOverflow = (((_regA >> 6) & 1) ^ ((_regA >> 5) & 1)) != 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstDcp()
 	{
 		ExecInstDec();
 		ExecInstCmp();
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstIsc()
 	{
 		ExecInstInc();
 		ExecInstSbc();
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstLax()
 	{
 		_regA = _internalOperand;
@@ -1828,7 +1783,6 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _internalOperand == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstLxa()
 	{
 		const byte randomConst = 0xFF;
@@ -1839,24 +1793,20 @@ internal sealed class Cpu(Computer computer)
 		_flagZero = _regA == 0;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstRla()
 	{
 		ExecInstRol();
 		ExecInstAnd();
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstRra()
 	{
 		ExecInstRor();
 		ExecInstAdc();
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstSax() => _internalOperand = (byte)(_regA & _regX);
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstSbx()
 	{
 		var resultByte = (byte)((_regA & _regX) - _internalOperand);
@@ -1866,7 +1816,6 @@ internal sealed class Cpu(Computer computer)
 		_regX = resultByte;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstShx()
 	{
 		if (_internalBoundaryCrossed)
@@ -1875,7 +1824,6 @@ internal sealed class Cpu(Computer computer)
 		_internalOperand = (byte)(_regX & (byte)((_internalAddress >> 8) + 1));
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstShy()
 	{
 		if (_internalBoundaryCrossed)
@@ -1884,14 +1832,12 @@ internal sealed class Cpu(Computer computer)
 		_internalOperand = (byte)(_regY & (byte)((_internalAddress >> 8) + 1));
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstSlo()
 	{
 		ExecInstAsl();
 		ExecInstOra();
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	void ExecInstSre()
 	{
 		ExecInstLsr();
