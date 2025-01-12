@@ -1,4 +1,4 @@
-namespace ANES;
+namespace ANES.Emulation;
 
 public abstract class Computer
 {

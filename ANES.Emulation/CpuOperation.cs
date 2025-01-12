@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace ANES;
+namespace ANES.Emulation;
 
 internal class CpuOperation(CpuInstruction instruction, CpuAddressingMode addressingMode, bool isIllegal = false)
 {

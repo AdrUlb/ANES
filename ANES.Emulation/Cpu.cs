@@ -1,8 +1,7 @@
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace ANES;
+namespace ANES.Emulation;
 
 internal sealed class Cpu(Computer computer)
 {

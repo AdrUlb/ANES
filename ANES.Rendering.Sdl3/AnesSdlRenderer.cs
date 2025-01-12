@@ -1,4 +1,5 @@
-﻿using Sdl3Sharp;
+﻿using ANES.Emulation;
+using Sdl3Sharp;
 using System.Drawing;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -8,7 +9,7 @@ namespace ANES.Rendering.Sdl3;
 public sealed class AnesSdlRenderer : IDisposable
 {
 	private readonly Nes _nes;
-	private const bool _palResolution = false;
+	private const bool _palResolution = true;
 	private const int _screenOffsetTop = _palResolution ? 0 : 8;
 	public const int ScreenWidth = 256;
 	public const int ScreenHeight = _palResolution ? 240 : 224;

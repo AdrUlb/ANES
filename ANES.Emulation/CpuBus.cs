@@ -1,4 +1,4 @@
-namespace ANES;
+namespace ANES.Emulation;
 
 public sealed class CpuBus(Nes nes) : MemoryBus
 {

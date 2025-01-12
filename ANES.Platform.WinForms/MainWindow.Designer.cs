@@ -36,6 +36,8 @@ partial class MainWindow
 		mainMenuOpen = new ToolStripMenuItem();
 		toolStripMenuItem1 = new ToolStripSeparator();
 		mainMenuExit = new ToolStripMenuItem();
+		viewToolStripMenuItem = new ToolStripMenuItem();
+		mainMenuViewScale = new ToolStripMenuItem();
 		helpToolStripMenuItem = new ToolStripMenuItem();
 		mainMenuAbout = new ToolStripMenuItem();
 		romOpenFIleDialog = new OpenFileDialog();
@@ -54,7 +56,7 @@ partial class MainWindow
 		// mainMenu
 		// 
 		mainMenu.BackColor = SystemColors.MenuBar;
-		mainMenu.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, helpToolStripMenuItem });
+		mainMenu.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, viewToolStripMenuItem, helpToolStripMenuItem });
 		mainMenu.Location = new Point(0, 0);
 		mainMenu.Name = "mainMenu";
 		mainMenu.Padding = new Padding(0);
@@ -73,22 +75,35 @@ partial class MainWindow
 		// 
 		mainMenuOpen.Name = "mainMenuOpen";
 		mainMenuOpen.ShortcutKeys = Keys.Control | Keys.O;
-		mainMenuOpen.Size = new Size(180, 22);
+		mainMenuOpen.Size = new Size(146, 22);
 		mainMenuOpen.Text = "&Open";
 		mainMenuOpen.Click += mainMenuOpen_Click;
 		// 
 		// toolStripMenuItem1
 		// 
 		toolStripMenuItem1.Name = "toolStripMenuItem1";
-		toolStripMenuItem1.Size = new Size(177, 6);
+		toolStripMenuItem1.Size = new Size(143, 6);
 		// 
 		// mainMenuExit
 		// 
 		mainMenuExit.Name = "mainMenuExit";
 		mainMenuExit.ShortcutKeys = Keys.Control | Keys.Q;
-		mainMenuExit.Size = new Size(180, 22);
+		mainMenuExit.Size = new Size(146, 22);
 		mainMenuExit.Text = "E&xit";
 		mainMenuExit.Click += mainMenuExit_Click;
+		// 
+		// viewToolStripMenuItem
+		// 
+		viewToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { mainMenuViewScale });
+		viewToolStripMenuItem.Name = "viewToolStripMenuItem";
+		viewToolStripMenuItem.Size = new Size(44, 24);
+		viewToolStripMenuItem.Text = "View";
+		// 
+		// mainMenuScale
+		// 
+		mainMenuViewScale.Name = "mainMenuScale";
+		mainMenuViewScale.Size = new Size(180, 22);
+		mainMenuViewScale.Text = "Scale";
 		// 
 		// helpToolStripMenuItem
 		// 
@@ -134,4 +149,6 @@ partial class MainWindow
 	private ToolStripMenuItem helpToolStripMenuItem;
 	private ToolStripMenuItem mainMenuAbout;
 	private OpenFileDialog romOpenFIleDialog;
+	private ToolStripMenuItem viewToolStripMenuItem;
+	private ToolStripMenuItem mainMenuViewScale;
 }

@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Drawing;
-using System.Runtime.CompilerServices;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
-namespace ANES;
+namespace ANES.Emulation;
 
 // https://www.nesdev.org/wiki/PPU_rendering
 // https://www.nesdev.org/wiki/PPU_programmer_reference
@@ -46,13 +46,14 @@ public sealed class Ppu(Nes nes)
 	private byte _dataReadBuffer = 0;
 
 	private bool _oddFrame = false;
-	private int _scanline = 261;
-	private int _cycle = 0;
+	private int _scanline;
+	private int _cycle;
 
 	private ushort _regV;
 	private ushort _regT;
 	private byte _regX;
 	private bool _regW;
+	private byte _regOamAddr;
 
 	private byte _bgTileFetch;
 	private byte _bgAttributeFetch;
@@ -63,9 +64,20 @@ public sealed class Ppu(Nes nes)
 	private ushort _bgPatternLowShifter;
 	private ushort _bgPatternHighShifter;
 
+	private int _spriteEvalStep;
+	private int _spriteN;
+	private int _spriteM;
+	private int _spriteCount;
+	private byte _spriteByte;
+	private bool _sprite0Copied;
+	private readonly Color[] _spritePixels = new Color[PictureWidth];
+	private readonly bool[] _spritePixelsBehindBackground = new bool[PictureWidth];
+	private readonly bool[] _spritePixelsSprite0 = new bool[PictureWidth];
+
 	private readonly byte[] _palette = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Composite_wiki.pal"));
 
 	internal readonly byte[] Oam = new byte[256];
+	internal readonly byte[] _secondaryOam = new byte[32];
 	public readonly Color[] Picture = new Color[PictureWidth * PictureHeight];
 	private int _pictureIndex = 0;
 
@@ -73,45 +85,57 @@ public sealed class Ppu(Nes nes)
 
 	public event EventHandler<PpuVblankEventArgs>? Vblank;
 
-	public byte ReadReg(int index, bool suppressSideEffects = false)
+	internal byte ReadReg(int index, bool suppressSideEffects = false)
 	{
 		byte ret = 0;
 
 		switch (index)
 		{
 			case 2: // PPUSTATUS
-					// TODO: PPU OPEN BUS
-				if (!suppressSideEffects)
-					_regW = false;
-				ret = (byte)(
-					(_statusVblank ? 1 << 7 : 0) |
-					(_statusSprite0 ? 1 << 6 : 0) |
-					(_statusSpriteOverflow ? 1 << 5 : 0)
-				);
-				break;
+				{
+					if (!suppressSideEffects)
+						_regW = false;
+
+					ret = (byte)(
+						(_statusVblank ? 1 << 7 : 0) |
+						(_statusSprite0 ? 1 << 6 : 0) |
+						(_statusSpriteOverflow ? 1 << 5 : 0)
+					);
+					break;
+				}
 			case 4: // OAMDATA
-					// TODO
-				break;
+				{
+					// Cycles 1-64: Secondary OAM (32-byte buffer for current sprites on scanline) is initialized to $FF - attempting to read $2004 will return $FF
+					if (_scanline is < 240 or 261 && _cycle is >= 1 and <= 64)
+					{
+						ret = 0xFF;
+						break;
+					}
+					ret = Oam[_regOamAddr];
+					break;
+				}
 			case 7: // PPUDATA
+				{
 					// Note that while the v register has 15 bits, the PPU memory space is only 14 bits wide. The highest bit is unused for access through $2007.
 					// TODO: During rendering (on the pre-render line and the visible lines 0-239, provided either background or sprite rendering is enabled),
 					//	it will update v in an odd way, triggering a coarse X increment and a Y increment simultaneously (with normal wrapping behavior).
-				ret = _dataReadBuffer;
-				_dataReadBuffer = nes.PpuBus.ReadByte((ushort)(_regV & 0b11_1111_1111_1111));
-				if (!suppressSideEffects)
-				{
-					if (_ctrlVramIncrement32)
-						_regV += 32;
-					else
-						_regV++;
+					ret = _dataReadBuffer;
+					_dataReadBuffer = nes.PpuBus.ReadByte((ushort)(_regV & 0b11_1111_1111_1111));
+					if (!suppressSideEffects)
+					{
+						if (_ctrlVramIncrement32)
+							_regV += 32;
+						else
+							_regV++;
+					}
+					break;
 				}
-				break;
 		}
 
 		return ret;
 	}
 
-	public void WriteReg(int index, byte value)
+	internal void WriteReg(int index, byte value)
 	{
 		switch (index)
 		{
@@ -128,7 +152,7 @@ public sealed class Ppu(Nes nes)
 
 				// Changing NMI enable from 0 to 1 while the vblank flag in PPUSTATUS is 1 will immediately trigger an NMI.
 				if (!prevNmiEnable && _ctrlVblankNmiEnable && _statusVblank)
-					Vblank.Invoke(this, new(false, true));
+					Vblank?.Invoke(this, new(false, true));
 
 				break;
 			case 1: // PPUMASK
@@ -143,17 +167,17 @@ public sealed class Ppu(Nes nes)
 				// TODO
 				break;
 			case 3: // OAMADDR
-					// TODO
+				_regOamAddr = value;
 				break;
 			case 4: // OAMDATA
-					// TODO
+				Oam[_regOamAddr++] = value;
 				break;
 			case 5: // PPUSCROLL
 				if (!_regW)
 				{
 					// t: ....... ...ABCDE <- d: ABCDE...
 					_regT &= 0b111_1111_1110_0000;
-					_regT |= (ushort)((value >> 3) & 0b111);
+					_regT |= (ushort)((value >> 3) & 0b11111);
 
 					// x:              FGH <- d: .....FGH
 					_regX = (byte)(value & 0b111);
@@ -200,7 +224,7 @@ public sealed class Ppu(Nes nes)
 		}
 	}
 
-	public void Tick()
+	internal void Tick()
 	{
 		DoCycle();
 
@@ -220,14 +244,18 @@ public sealed class Ppu(Nes nes)
 		}
 	}
 
+	internal void Reset()
+	{
+		Oam.AsSpan().Fill(0xFF);
+		_scanline = 261;
+		_cycle = 0;
+	}
+
 	private void DoCycle()
 	{
 		// Vblank flag is set on scanline 241, cycle 1
 		if (_scanline == 241 && _cycle == 1)
 		{
-			// TODO: THIS IS A HACK
-			DrawSprites();
-
 			// Set Vblank flag
 			_statusVblank = true;
 
@@ -237,20 +265,119 @@ public sealed class Ppu(Nes nes)
 		}
 
 		// No work is done between scanlines 240 and 260
-		if (_scanline is >= 240 and <= 260)
+		if (_scanline is > 239 and < 261)
 			return;
+
+		// Cycles 257-320: Sprite fetches (8 sprites total, 8 cycles per sprite)
+		// TODO: this is a hack!
+		if (_cycle == 257)
+		{
+			FetchSprites();
+		}
+
+		// This should be accurate enough?
+		if (_cycle == 64)
+		{
+			// Clear secondary OAM
+			_secondaryOam.AsSpan().Fill(0xFF);
+			_spriteN = 0;
+			_spriteM = 0;
+			_spriteCount = 0;
+			_spriteEvalStep = 1;
+			_sprite0Copied = false;
+		}
+
+		// Cycles 65-256: Sprite evaluation
+		if (_scanline != 261 && _cycle is >= 65 and <= 256)
+		{
+
+			if (_cycle % 2 == 1) // On odd cycles, data is read from (primary) OAM
+			{
+				_spriteByte = Oam[_spriteN * 4 + _spriteM];
+			}
+			else // On even cycles, data is written to secondary OAM (unless secondary OAM is full, in which case it will read the value in secondary OAM instead)
+			{
+				switch (_spriteEvalStep)
+				{
+					case 1:
+						{
+							// 1. Starting at n = 0, read a sprite's Y-coordinate (OAM[n][0], copying it to the next open slot in secondary OAM
+							// 1a. If Y-coordinate is in range, copy remaining bytes of sprite data (OAM[n][1] thru OAM[n][3]) into secondary OAM.
+
+							// Always copy the read byte into secondary OAM
+							_secondaryOam[_spriteCount * 4 + _spriteM] = _spriteByte;
+
+							var inRange = _spriteByte <= _scanline && _spriteByte + 8 > _scanline;
+
+							// If this was the last byte of the sprite
+							if (_spriteM == 3)
+							{
+								if (_spriteN == 0)
+									_sprite0Copied = true;
+
+								_spriteM = 0;
+								_spriteCount++;
+							}
+							else if (_spriteM != 0 || inRange)
+							{
+								_spriteM++;
+								break;
+							}
+
+							goto case 2;
+						}
+					case 2:
+						// 2. Increment n
+						_spriteN++;
+
+						// 2a. If n has overflowed back to zero (all 64 sprites evaluated), go to 4
+						if (_spriteN >= 64)
+						{
+							_spriteN %= 64;
+							_spriteEvalStep = 4;
+							break;
+						}
+
+						// 2b. If less than 8 sprites have been found, go to 1
+						if (_spriteCount < 8)
+						{
+							_spriteEvalStep = 1;
+							break;
+						}
+
+						// 2c. If exactly 8 sprites have been found, disable writes to secondary OAM because it is full. This causes sprites in back to drop out.
+						_spriteEvalStep = 3;
+						break;
+					case 3: // TODO
+							// 3. Starting at m = 0, evaluate OAM[n][m] as a Y-coordinate.
+							// 3a. If the value is in range, set the sprite overflow flag in $2002 and read the next 3 entries of OAM (incrementing 'm' after each byte and incrementing 'n' when 'm' overflows); if m = 3, increment n
+							// 3b. If the value is not in range, increment n and m (without carry). If n overflows to 0, go to 4; otherwise go to 3
+							//	The m increment is a hardware bug - if only n was incremented, the overflow flag would be set whenever more than 8 sprites were present on the same scanline, as expected.
+						break;
+					case 4:
+						// 4. Attempt (and fail) to copy OAM[n][0] into the next free slot in secondary OAM, and increment n (repeat until HBLANK is reached)
+						break;
+				}
+			}
+		}
+
+		// OAMADDR is set to 0 during each of ticks 257–320 (the sprite tile loading interval) of the pre-render and visible scanlines.
+		if (_cycle is >= 257 and <= 320)
+			_regOamAddr = 0;
+
+		if (_scanline != 261 && _cycle is >= 1 and <= 256)
+		{
+			OutputDot();
+		}
+
+		if (_cycle is >= 1 and <= 336)
+		{
+			_bgPatternLowShifter <<= 1;
+			_bgPatternHighShifter <<= 1;
+		}
 
 		if (_cycle is (>= 1 and <= 256) or >= 321 && IsRenderingEnabled)
 		{
-			if (_scanline != 261 && _cycle is >= 1 and <= 256)
-				OutputDot();
-
-			if (_cycle <= 336)
-			{
-				_bgPatternLowShifter <<= 1;
-				_bgPatternHighShifter <<= 1;
-			}
-
 			// https://www.nesdev.org/wiki/PPU_scrolling#Tile_and_attribute_fetching
 			// The data for each tile is fetched during this phase. Each memory access takes 2 PPU cycles to complete, and 4 must be performed per tile
 			// The data fetched from these accesses is placed into internal latches, and then fed to the appropriate shift registers when it's time to do so (every 8 cycles).
@@ -273,7 +400,6 @@ public sealed class Ppu(Nes nes)
 						var coarseXHigh3 = coarseX >> 2;
 						var coarseYHigh3 = coarseY >> 2;
 						var addr = (ushort)(0x23C0 | (nametable << 10) | (coarseYHigh3 << 3) | coarseXHigh3);
-						//var addr = (ushort)(0x23C0 | (_regV & 0x0C00) | ((_regV >> 4) & 0x38) | ((_regV >> 2) & 0x07));
 						_bgAttributeFetch = nes.PpuBus.ReadByte(addr);
 						break;
 					}
@@ -317,8 +443,8 @@ public sealed class Ppu(Nes nes)
 
 						_bgPatternLowShifter |= _bgPatternLowFetch;
 						_bgPatternHighShifter |= _bgPatternHighFetch;
-
 						IncrementCoarseX();
+
 					}
 					break;
 			}
@@ -336,8 +462,8 @@ public sealed class Ppu(Nes nes)
 		if (_cycle == 257 && IsRenderingEnabled)
 		{
 			// v: ....A.. ...BCDEF <- t: ....A.. ...BCDEF
-			_regV &= 0b111_1011_1110_0000;
-			_regV |= (ushort)(_regT & 0b000_0100_0001_1111);
+			_regV &= 0b1111011_11100000;
+			_regV |= (ushort)(_regT & 0b0000100_00011111);
 		}
 
 		if (_scanline == 261)
@@ -354,93 +480,123 @@ public sealed class Ppu(Nes nes)
 			if (_cycle is >= 280 and <= 304 && IsRenderingEnabled)
 			{
 				// v: GHIA.BC DEF..... <- t: GHIA.BC DEF.....
-				_regV &= 0b000_0100_0001_1111;
-				_regV |= (ushort)(_regT & 0b111_1011_1110_0000);
+				_regV &= 0b0000100_00011111;
+				_regV |= (ushort)(_regT & 0b1111011_11100000);
 			}
 		}
 	}
-	
+
+	private Color GetPaletteColor(int paletteIndex)
+	{
+		return Color.FromArgb(_palette[paletteIndex * 3 + 0], _palette[paletteIndex * 3 + 1], _palette[paletteIndex * 3 + 2]); ;
+	}
+
 	private void OutputDot()
 	{
+		// TODO: Sprite 0 hit acts as if the image starts at cycle 2 (which is the same cycle that the shifters shift for the first time), so the sprite 0 flag will be raised at this point at the earliest.
+		// Actual pixel output is delayed further due to internal render pipelining, and the first pixel is output during cycle 4.
 		var patternLow = (_bgPatternLowShifter >> (16 - 1 - _regX)) & 1;
 		var patternHigh = (_bgPatternHighShifter >> (16 - 1 - _regX)) & 1;
 
 		var pattern = (patternHigh << 1) | patternLow;
 
-		var palette = (_bgPaletteShifter >> 2) & 0b11;
+		var x = _cycle - 1;
+		var shift = _regX > 8 - (x % 8) ? 0 : 2;
+		var palette = (_bgPaletteShifter >> shift) & 0b11;
 
-		int paletteIndex = pattern switch
+		var spritePixel = _spritePixels[_cycle - 1];
+		var spriteBehindBackground = _spritePixelsBehindBackground[_cycle - 1];
+		var sprite0 = _spritePixelsSprite0[_cycle - 1];
+
+		if (spritePixel != Color.Transparent && pattern != 0 && sprite0)
 		{
-			0 => nes.PpuBus.ReadByte(0x3F00),
-			1 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * palette + 1))),
-			2 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * palette + 2))),
-			3 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * palette + 3))),
-			_ => throw new UnreachableException()
-		};
+			_statusSprite0 = true;
+		}
 
-		paletteIndex %= _palette.Length / 3;
+		Color pixel;
+		if (spritePixel != Color.Transparent && (pattern == 0 || !spriteBehindBackground))
+		{
+			pixel = spritePixel;
+		}
+		else
+		{
+			int paletteIndex = pattern switch
+			{
+				0 => nes.PpuBus.ReadByte(0x3F00),
+				1 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * palette + 1))),
+				2 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * palette + 2))),
+				3 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * palette + 3))),
+				_ => throw new UnreachableException()
+			};
+			paletteIndex %= _palette.Length / 3;
+			pixel = GetPaletteColor(paletteIndex);
+		}
 
-		Picture[_pictureIndex++] = Color.FromArgb(_palette[paletteIndex * 3 + 0], _palette[paletteIndex * 3 + 1], _palette[paletteIndex * 3 + 2]);
+		Picture[_pictureIndex] = pixel;
+
+		_pictureIndex++;
 	}
 
-	private void DrawSprites()
+	private void FetchSprites()
 	{
-		for (var i = 0; i < 64; i++)
+		_spritePixels.AsSpan().Fill(Color.Transparent);
+
+		var patternHalf = _ctrlSpritePatternTable ? 1 : 0;
+
+		for (var i = 0; i < 8; i++)
 		{
-			var x = Oam[i * 4 + 3];
-			var y = Oam[i * 4 + 0] + 1;
+			var y = _secondaryOam[i * 4 + 0];
+			if (y == 0xFF)
+				continue;
 
-			var index = Oam[i * 4 + 1];
+			var attribute = _secondaryOam[i * 4 + 2];
+			if (attribute == 0xFF)
+				continue;
 
-			var attribute = Oam[i * 4 + 2];
+			var x = _secondaryOam[i * 4 + 3];
+			var index = _secondaryOam[i * 4 + 1];
+
 			var palette = attribute & 0b11;
 			var behindBackground = ((attribute >> 5) & 1) != 0;
 			var flipX = ((attribute >> 6) & 1) != 0;
 			var flipY = ((attribute >> 7) & 1) != 0;
 
-			var patternHalf = _ctrlSpritePatternTable ? 1 : 0;
+			var tileY = _scanline - y;
 
-			for (var tileY = 0; tileY < 8; tileY++)
+			var fineY = (flipY ? (7 - tileY) : tileY) % 8;
+			var patternAddr = (ushort)((patternHalf << 12) | (index << 4) | fineY);
+			var patternLow = nes.PpuBus.ReadByte(patternAddr);
+			var patternHigh = nes.PpuBus.ReadByte((ushort)(patternAddr + 8));
+
+			for (var tileX = 0; tileX < 8; tileX++)
 			{
-				var yy = y + tileY;
+				var xx = x + tileX;
 
-				if (yy >= PictureHeight)
+				if (xx >= PictureWidth)
 					break;
 
-				var fineY = (flipY ? (7 - tileY) : tileY) % 8;
-				var patternAddr = (ushort)((patternHalf << 12) | (index << 4) | fineY);
-				var patternLow = nes.PpuBus.ReadByte(patternAddr);
-				var patternHigh = nes.PpuBus.ReadByte((ushort)(patternAddr + 8));
+				var shift = flipX ? tileX : (7 - tileX);
+				var pattern = (((patternHigh >> shift) & 1) << 1) | ((patternLow >> shift) & 1);
 
+				if (pattern == 0)
+					continue;
 
-				for (var tileX = 0; tileX < 8; tileX++)
+				if (pattern == 0)
+					continue;
+
+				int paletteIndex = pattern switch
 				{
-					var xx = x + tileX;
+					1 => nes.PpuBus.ReadByte((ushort)(0x3F10 | (4 * palette + 1))),
+					2 => nes.PpuBus.ReadByte((ushort)(0x3F10 | (4 * palette + 2))),
+					3 => nes.PpuBus.ReadByte((ushort)(0x3F10 | (4 * palette + 3))),
+					_ => throw new UnreachableException()
+				};
 
-					if (xx >= PictureWidth)
-						break;
+				paletteIndex %= _palette.Length / 3;
 
-					var pictureIndex = xx + yy * PictureWidth;
-
-					var shift = flipX ? tileX : (7 - tileX);
-					var pattern = (((patternHigh >> shift) & 1) << 1) | ((patternLow >> shift) & 1);
-
-					if (pattern == 0)
-						continue;
-
-					int paletteIndex = pattern switch
-					{
-						0 => nes.PpuBus.ReadByte(0x3F10),
-						1 => nes.PpuBus.ReadByte((ushort)(0x3F10 | (4 * palette + 1))),
-						2 => nes.PpuBus.ReadByte((ushort)(0x3F10 | (4 * palette + 2))),
-						3 => nes.PpuBus.ReadByte((ushort)(0x3F10 | (4 * palette + 3))),
-						_ => throw new UnreachableException()
-					};
-
-					paletteIndex %= _palette.Length / 3;
-
-					Picture[pictureIndex] = Color.FromArgb(_palette[paletteIndex * 3 + 0], _palette[paletteIndex * 3 + 1], _palette[paletteIndex * 3 + 2]);
-				}
+				_spritePixels[xx] = Color.FromArgb(_palette[paletteIndex * 3 + 0], _palette[paletteIndex * 3 + 1], _palette[paletteIndex * 3 + 2]);
+				_spritePixelsBehindBackground[xx] = behindBackground;
+				_spritePixelsSprite0[xx] = _sprite0Copied && i == 0;
 			}
 		}
 	}

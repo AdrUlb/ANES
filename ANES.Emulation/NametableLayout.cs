@@ -1,4 +1,4 @@
-namespace ANES;
+namespace ANES.Emulation;
 
 internal enum NametableLayout
 {

@@ -1,4 +1,4 @@
-namespace ANES;
+namespace ANES.Emulation;
 
 // https://www.nesdev.org/wiki/PPU_memory_map
 

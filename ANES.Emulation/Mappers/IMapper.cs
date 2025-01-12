@@ -1,4 +1,4 @@
-namespace ANES.Mappers;
+namespace ANES.Emulation.Mappers;
 
 internal interface IMapper
 {

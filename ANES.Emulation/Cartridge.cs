@@ -1,6 +1,6 @@
-using ANES.Mappers;
+using ANES.Emulation.Mappers;
 
-namespace ANES;
+namespace ANES.Emulation;
 
 internal sealed class Cartridge
 {

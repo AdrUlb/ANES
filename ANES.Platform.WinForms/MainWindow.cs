@@ -1,3 +1,4 @@
+using ANES.Emulation;
 using ANES.Rendering.Sdl3;
 using Sdl3Sharp;
 using System.ComponentModel;
@@ -22,17 +23,37 @@ public partial class MainWindow : Form
 
 		InitializeComponent();
 
-		_renderThread = new(RenderProc);
+		SuspendLayout();
+		// Add menu options for setting the scale to 1x-8x
+		for (var i = 1; i <= 8; i++)
+		{
+			var scale = i;
+			var item = new ToolStripMenuItem($"{i}x", null, (_, _) => SetScale(scale));
+			mainMenuViewScale.DropDownItems.Add(item);
+		}
+		SetScale(2);
+		ResumeLayout();
 
-		SetScale(3);
+		_renderThread = new(RenderProc);
 	}
 
-	private void SetScale(float scale)
+	private void SetScale(int scale)
 	{
+		// Limit the scale to the maximum size of the working area
+		var workingArea = Screen.FromControl(this).WorkingArea;
+		var maxScaleX = workingArea.Width / AnesSdlRenderer.ScreenWidth;
+		var maxScaleY = workingArea.Height / AnesSdlRenderer.ScreenHeight;
+		var maxScale = Math.Min(maxScaleX, maxScaleY);
+
+		if (scale > maxScale)
+			MessageBox.Show(this, $"The requested scale ({scale}x) would exceed the screen size.\nScaling to the maximum possible size ({maxScale}x) instead.", "Scale", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+
+		scale = Math.Min(scale, maxScale);
+
 		// Adjust the window size to fit the NES screen
-		var diffX = (int)((AnesSdlRenderer.ScreenWidth * scale) - sdlControl.Width);
-		var diffY = (int)((AnesSdlRenderer.ScreenHeight * scale) - sdlControl.Height);
-		ClientSize += new Size(diffX, diffY);
+		var newWidth = (AnesSdlRenderer.ScreenWidth * scale) - sdlControl.Width + ClientSize.Width;
+		var newHeight = (AnesSdlRenderer.ScreenHeight * scale) - sdlControl.Height + ClientSize.Height;
+		ClientSize = new Size(newWidth, newHeight);
 	}
 
 	protected override void OnClosing(CancelEventArgs e)
