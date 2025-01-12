@@ -43,8 +43,9 @@ public sealed class Nes : Computer
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static unsafe void WaitUntil(Func<bool> predicate)
 	{
-#if !DEBUG
-		SpinWait.SpinUntil(predicate);
+#if !DEBUG || true
+		while (!predicate())
+			SpinWait.SpinUntil(predicate, 1);
 #else
 		while (!predicate()) { }
 #endif

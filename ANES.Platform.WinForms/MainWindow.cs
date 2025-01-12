@@ -45,6 +45,7 @@ public partial class MainWindow : Form
 		_sdlRenderer = SdlRenderer.Create(sdlControl.SdlWindow);
 		_anesRenderer = new(_nes, _sdlRenderer);
 		_renderThread.Start();
+		_nes.Start();
 	}
 
 	protected override void OnKeyDown(KeyEventArgs e)
@@ -145,10 +146,8 @@ public partial class MainWindow : Form
 		if (result != DialogResult.OK)
 			return;
 
-		_nes.Stop();
 		var romFile = romOpenFIleDialog.FileName;
 		_nes.InsertCartridge(romFile);
-		_nes.Start();
 		_nes.Reset();
 	}
 }
