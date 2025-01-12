@@ -2,6 +2,7 @@ using ANES.Emulation;
 using ANES.Rendering.Sdl3;
 using Sdl3Sharp;
 using System.ComponentModel;
+using System.Diagnostics;
 
 namespace ANES.Platform.WinForms;
 
@@ -15,10 +16,10 @@ public partial class MainWindow : Form
 
 	private volatile bool _quit = false;
 
+	private PatternTablesWindow? _patternTablesWindow = null;
+
 	public MainWindow()
 	{
-		DoubleBuffered = true;
-
 		AnesSdlRenderer.SetRuntimeImportResolver();
 
 		InitializeComponent();
@@ -56,13 +57,22 @@ public partial class MainWindow : Form
 		ClientSize = new Size(newWidth, newHeight);
 	}
 
-	protected override void OnClosing(CancelEventArgs e)
+	private void RenderProc()
 	{
-		base.OnClosing(e);
+		while (!_quit)
+		{
+			_sdlRenderer.SetDrawColor(Color.Black);
+			_sdlRenderer.Clear();
+			_anesRenderer.Render();
+			_patternTablesWindow?.Render();
+			_sdlRenderer.Present();
+		}
 	}
 
 	protected override void OnLoad(EventArgs e)
 	{
+		if (sdlControl.SdlWindow == null)
+			throw new UnreachableException();
 		_sdlRenderer = SdlRenderer.Create(sdlControl.SdlWindow);
 		_anesRenderer = new(_nes, _sdlRenderer);
 		_renderThread.Start();
@@ -131,36 +141,25 @@ public partial class MainWindow : Form
 		}
 	}
 
-	private void RenderProc()
+	protected override void OnFormClosing(FormClosingEventArgs e)
 	{
-		while (!_quit)
-		{
-			_sdlRenderer.SetDrawColor(Color.Black);
-			_sdlRenderer.Clear();
-			_anesRenderer.Render();
-			_sdlRenderer.Present();
-		}
-	}
-
-	protected override void OnClosed(EventArgs e)
-	{
+		Hide();
 		_quit = true;
-		_anesRenderer.Dispose();
 		SpinWait.SpinUntil(() => !_renderThread.IsAlive);
-
+		_anesRenderer.Dispose();
 		_sdlRenderer.Destroy();
 
-		base.OnClosed(e);
+		base.OnFormClosing(e);
 
 		_nes.Stop();
 	}
 
-	private void mainMenuExit_Click(object sender, EventArgs e)
+	private void mainMenuFileExit_Click(object sender, EventArgs e)
 	{
 		Close();
 	}
 
-	private void mainMenuOpen_Click(object sender, EventArgs e)
+	private void mainMenuFileOpen_Click(object sender, EventArgs e)
 	{
 		var result = romOpenFIleDialog.ShowDialog();
 
@@ -170,5 +169,15 @@ public partial class MainWindow : Form
 		var romFile = romOpenFIleDialog.FileName;
 		_nes.InsertCartridge(romFile);
 		_nes.Reset();
+	}
+
+	private void mainMenuDebugPatternTableViewer_Click(object sender, EventArgs e)
+	{
+		if (_patternTablesWindow == null || _patternTablesWindow.IsDisposed)
+		{
+			_patternTablesWindow = new PatternTablesWindow(_nes);
+			_patternTablesWindow.Show();
+		}
+		else _patternTablesWindow.Focus();
 	}
 }

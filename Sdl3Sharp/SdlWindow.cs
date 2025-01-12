@@ -29,6 +29,21 @@ public sealed class SdlWindow
 	public void Destroy() => SDL_DestroyWindow(Handle);
 	public SdlWindowId GetId() => SDL_GetWindowID(Handle);
 
+	public SdlProperties GetProperties()
+	{
+		var props = SDL_GetWindowProperties(Handle);
+		if (props == 0)
+			throw new SdlErrorException();
+
+		return new(props);
+	}
+
+	public void SetSize(int width, int height)
+	{
+		if (!SDL_SetWindowSize(Handle, width, height))
+			throw new SdlErrorException();
+	}
+
 	public void Show()
 	{
 		if (!SDL_ShowWindow(Handle))

@@ -453,16 +453,21 @@ internal sealed class Cpu(Computer computer)
 	public void RaiseNmi() => _pendingNmi = true;
 	public void RaiseIrq() => _pendingIrq = true;
 
+	//bool a = true;
+
 	public void Tick()
 	{
 		_opCycle++;
+		/*if (a)
+		{
+			Console.ReadKey(true);
+			a = false;
+		}*/
 
 		if (_op.Instruction == CpuInstruction.None)
 		{
-			//if (_traceCycles % 10000000 == 0)
-			//if (_traceCycles > 2000000)
-			//	Console.WriteLine(GenerateTraceLine());
-			//	Console.ReadKey(true);
+			/*if (_traceCycles >= 10000)
+				Console.WriteLine(GenerateTraceLine());*/
 
 			FetchNextOperation();
 

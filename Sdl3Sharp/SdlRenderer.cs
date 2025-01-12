@@ -32,4 +32,12 @@ public sealed class SdlRenderer
 
 	public void Clear() => SDL_RenderClear(Handle);
 	public void Present() => SDL_RenderPresent(Handle);
+
+	public int GetVsync()
+	{
+		if (!SDL_GetRenderVSync(Handle, out var vsync))
+			throw new SdlErrorException();
+
+		return vsync;
+	}
 }

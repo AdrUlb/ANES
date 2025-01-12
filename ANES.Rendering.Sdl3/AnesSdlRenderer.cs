@@ -61,11 +61,11 @@ public sealed class AnesSdlRenderer : IDisposable
 		}
 		_screen.Unlock();
 
+		_waitingForFrame = true;
+
 		var srcRect = new RectangleF(0, _screenOffsetTop, ScreenWidth, ScreenHeight);
 
 		_screen.Render(srcRect, RectangleF.Empty);
-
-		_waitingForFrame = true;
 
 		bool FrameReady() => !_waitingForFrame || _disposed;
 	}
@@ -98,6 +98,8 @@ public sealed class AnesSdlRenderer : IDisposable
 
 	public void Dispose()
 	{
+		_nes.FrameReady -= OnFrameReady;
+
 		_disposed = true;
 		_screen.Destroy();
 	}

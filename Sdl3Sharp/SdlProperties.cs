@@ -26,10 +26,16 @@ public readonly struct SdlProperties
 	public static readonly PointerProp WindowCreateWin32Hwnd = new("SDL.window.create.win32.hwnd");
 	public static readonly PointerProp WindowCreateWidth = new("SDL.window.create.width");
 	public static readonly PointerProp WindowCreateHeight = new("SDL.window.create.height");
+	public static readonly PointerProp WindowWin32Hwnd = new("SDL.window.win32.hwnd");
 
 	internal readonly uint Id;
 
-	private SdlProperties(uint id)
+	public SdlProperties()
+	{
+		Id = SDL_CreateProperties();
+	}
+
+	internal SdlProperties(uint id)
 	{
 		Id = id;
 	}
@@ -38,4 +44,5 @@ public readonly struct SdlProperties
 	public void Destroy() => SDL_DestroyProperties(Id);
 	public void Set(NumberProp prop, long value) => SDL_SetNumberProperty(Id, prop.Name, value);
 	public void Set(PointerProp prop, nint value) => SDL_SetPointerProperty(Id, prop.Name, value);
+	public nint Get(PointerProp prop, nint defaultValue) => SDL_GetPointerProperty(Id, prop.Name, defaultValue);
 }

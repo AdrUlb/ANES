@@ -33,13 +33,15 @@ partial class MainWindow
 		sdlControl = new SdlControl();
 		mainMenu = new MyMenuStrip();
 		fileToolStripMenuItem = new ToolStripMenuItem();
-		mainMenuOpen = new ToolStripMenuItem();
+		mainMenuFileOpen = new ToolStripMenuItem();
 		toolStripMenuItem1 = new ToolStripSeparator();
-		mainMenuExit = new ToolStripMenuItem();
+		mainMenuFileExit = new ToolStripMenuItem();
 		viewToolStripMenuItem = new ToolStripMenuItem();
 		mainMenuViewScale = new ToolStripMenuItem();
+		debugToolStripMenuItem = new ToolStripMenuItem();
+		mainMenuDebugPatternTableViewer = new ToolStripMenuItem();
 		helpToolStripMenuItem = new ToolStripMenuItem();
-		mainMenuAbout = new ToolStripMenuItem();
+		mainMenuHelpAbout = new ToolStripMenuItem();
 		romOpenFIleDialog = new OpenFileDialog();
 		mainMenu.SuspendLayout();
 		SuspendLayout();
@@ -56,7 +58,7 @@ partial class MainWindow
 		// mainMenu
 		// 
 		mainMenu.BackColor = SystemColors.MenuBar;
-		mainMenu.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, viewToolStripMenuItem, helpToolStripMenuItem });
+		mainMenu.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, viewToolStripMenuItem, debugToolStripMenuItem, helpToolStripMenuItem });
 		mainMenu.Location = new Point(0, 0);
 		mainMenu.Name = "mainMenu";
 		mainMenu.Padding = new Padding(0);
@@ -66,57 +68,71 @@ partial class MainWindow
 		// 
 		// fileToolStripMenuItem
 		// 
-		fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { mainMenuOpen, toolStripMenuItem1, mainMenuExit });
+		fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { mainMenuFileOpen, toolStripMenuItem1, mainMenuFileExit });
 		fileToolStripMenuItem.Name = "fileToolStripMenuItem";
 		fileToolStripMenuItem.Size = new Size(37, 24);
 		fileToolStripMenuItem.Text = "&File";
 		// 
-		// mainMenuOpen
+		// mainMenuFileOpen
 		// 
-		mainMenuOpen.Name = "mainMenuOpen";
-		mainMenuOpen.ShortcutKeys = Keys.Control | Keys.O;
-		mainMenuOpen.Size = new Size(146, 22);
-		mainMenuOpen.Text = "&Open";
-		mainMenuOpen.Click += mainMenuOpen_Click;
+		mainMenuFileOpen.Name = "mainMenuFileOpen";
+		mainMenuFileOpen.ShortcutKeys = Keys.Control | Keys.O;
+		mainMenuFileOpen.Size = new Size(146, 22);
+		mainMenuFileOpen.Text = "&Open";
+		mainMenuFileOpen.Click += mainMenuFileOpen_Click;
 		// 
 		// toolStripMenuItem1
 		// 
 		toolStripMenuItem1.Name = "toolStripMenuItem1";
 		toolStripMenuItem1.Size = new Size(143, 6);
 		// 
-		// mainMenuExit
+		// mainMenuFileExit
 		// 
-		mainMenuExit.Name = "mainMenuExit";
-		mainMenuExit.ShortcutKeys = Keys.Control | Keys.Q;
-		mainMenuExit.Size = new Size(146, 22);
-		mainMenuExit.Text = "E&xit";
-		mainMenuExit.Click += mainMenuExit_Click;
+		mainMenuFileExit.Name = "mainMenuFileExit";
+		mainMenuFileExit.ShortcutKeys = Keys.Control | Keys.Q;
+		mainMenuFileExit.Size = new Size(146, 22);
+		mainMenuFileExit.Text = "E&xit";
+		mainMenuFileExit.Click += mainMenuFileExit_Click;
 		// 
 		// viewToolStripMenuItem
 		// 
 		viewToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { mainMenuViewScale });
 		viewToolStripMenuItem.Name = "viewToolStripMenuItem";
 		viewToolStripMenuItem.Size = new Size(44, 24);
-		viewToolStripMenuItem.Text = "View";
+		viewToolStripMenuItem.Text = "&View";
 		// 
-		// mainMenuScale
+		// mainMenuViewScale
 		// 
-		mainMenuViewScale.Name = "mainMenuScale";
-		mainMenuViewScale.Size = new Size(180, 22);
-		mainMenuViewScale.Text = "Scale";
+		mainMenuViewScale.Name = "mainMenuViewScale";
+		mainMenuViewScale.Size = new Size(101, 22);
+		mainMenuViewScale.Text = "&Scale";
+		// 
+		// debugToolStripMenuItem
+		// 
+		debugToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { mainMenuDebugPatternTableViewer });
+		debugToolStripMenuItem.Name = "debugToolStripMenuItem";
+		debugToolStripMenuItem.Size = new Size(54, 24);
+		debugToolStripMenuItem.Text = "&Debug";
+		// 
+		// mainMenuDebugPatternTableViewer
+		// 
+		mainMenuDebugPatternTableViewer.Name = "mainMenuDebugPatternTableViewer";
+		mainMenuDebugPatternTableViewer.Size = new Size(147, 22);
+		mainMenuDebugPatternTableViewer.Text = "&Pattern Tables";
+		mainMenuDebugPatternTableViewer.Click += mainMenuDebugPatternTableViewer_Click;
 		// 
 		// helpToolStripMenuItem
 		// 
-		helpToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { mainMenuAbout });
+		helpToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { mainMenuHelpAbout });
 		helpToolStripMenuItem.Name = "helpToolStripMenuItem";
 		helpToolStripMenuItem.Size = new Size(44, 24);
 		helpToolStripMenuItem.Text = "&Help";
 		// 
-		// mainMenuAbout
+		// mainMenuHelpAbout
 		// 
-		mainMenuAbout.Name = "mainMenuAbout";
-		mainMenuAbout.Size = new Size(107, 22);
-		mainMenuAbout.Text = "&About";
+		mainMenuHelpAbout.Name = "mainMenuHelpAbout";
+		mainMenuHelpAbout.Size = new Size(107, 22);
+		mainMenuHelpAbout.Text = "&About";
 		// 
 		// romOpenFIleDialog
 		// 
@@ -143,12 +159,14 @@ partial class MainWindow
 	private SdlControl sdlControl;
 	private MyMenuStrip mainMenu;
 	private ToolStripMenuItem fileToolStripMenuItem;
-	private ToolStripMenuItem mainMenuOpen;
+	private ToolStripMenuItem mainMenuFileOpen;
 	private ToolStripSeparator toolStripMenuItem1;
-	private ToolStripMenuItem mainMenuExit;
+	private ToolStripMenuItem mainMenuFileExit;
 	private ToolStripMenuItem helpToolStripMenuItem;
-	private ToolStripMenuItem mainMenuAbout;
+	private ToolStripMenuItem mainMenuHelpAbout;
 	private OpenFileDialog romOpenFIleDialog;
 	private ToolStripMenuItem viewToolStripMenuItem;
 	private ToolStripMenuItem mainMenuViewScale;
+	private ToolStripMenuItem debugToolStripMenuItem;
+	private ToolStripMenuItem mainMenuDebugPatternTableViewer;
 }

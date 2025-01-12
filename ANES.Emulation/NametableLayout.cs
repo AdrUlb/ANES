@@ -1,6 +1,6 @@
 namespace ANES.Emulation;
 
-internal enum NametableLayout
+public enum NametableLayout
 {
 	MirrorHorizonally,
 	MirrorVertically

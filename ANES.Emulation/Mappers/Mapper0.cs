@@ -1,6 +1,6 @@
 namespace ANES.Emulation.Mappers;
 
-internal sealed class Mapper0 : IMapper
+public sealed class Mapper0 : IMapper
 {
 	private readonly Nes _nes;
 
@@ -9,8 +9,8 @@ internal sealed class Mapper0 : IMapper
 	private readonly int _prgBank2Offset;
 
 	private readonly byte[] _chrRom;
+	private readonly bool _chrRam;
 
-	private readonly byte[][] _nametables = [new byte[0x400], new byte[0x400]];
 	private readonly int _nt1Offset;
 	private readonly int _nt4Offset;
 	private readonly int _nt2Offset;
@@ -18,11 +18,22 @@ internal sealed class Mapper0 : IMapper
 
 	public string Name { get; } = "NROM";
 
-	public Mapper0(Nes nes, byte[] prgRom, byte[] chrRom, NametableLayout nametableLayout)
+	public Mapper0(Nes nes, byte[] prgRom, byte[] chrRom, int chrRamBytes, NametableLayout nametableLayout)
 	{
+		if (chrRom.Length != 0 && chrRamBytes != 0)
+			throw new FormatException("NROM only supports CHR ROM or CHR RAM, not both.");
+
+		if (chrRom.Length == 0 && chrRamBytes == 0)
+			throw new FormatException("NROM requires CHR ROM or CHR RAM.");
+
+		_chrRam = chrRamBytes != 0;
+
+		if ((!_chrRam && chrRom.Length != 8 * 1024) || (_chrRam && chrRamBytes != 8 * 1024))
+			throw new FormatException("NROM only supports 8K CHR RAM/RAM.");
+
 		_nes = nes;
 		_prgRom = prgRom;
-		_chrRom = chrRom;
+		_chrRom = !_chrRam ? chrRom : new byte[chrRamBytes];
 
 		_prgBank2Offset = prgRom.Length switch
 		{
@@ -30,9 +41,6 @@ internal sealed class Mapper0 : IMapper
 			32 * 1024 => 16 * 1024,
 			_ => throw new FormatException("NROM only supports 16K or 32K PRG ROM.")
 		};
-
-		if (chrRom.Length != 8 * 1024)
-			throw new FormatException("NROM only supports 8K CHR ROM.");
 
 		switch (nametableLayout)
 		{
@@ -62,7 +70,7 @@ internal sealed class Mapper0 : IMapper
 
 	public byte PpuReadByte(ushort address, bool suppressSideEffects = false)
 	{
-		if (address is >= 0x3000 and <= 0x3EFF)
+		if (address is >= 0x3000 and <= 0x3FFF)
 			address -= 0x1000;
 
 		return address switch
@@ -78,12 +86,15 @@ internal sealed class Mapper0 : IMapper
 
 	public void PpuWriteByte(ushort address, byte value)
 	{
-		if (address is >= 0x3000 and <= 0x3EFF)
+		if (address is >= 0x3000 and <= 0x3FFF)
 			address -= 0x1000;
 
 		switch (address)
 		{
-			case < 0x2000: break;
+			case < 0x2000:
+				if (_chrRam)
+					_chrRom[address] = value;
+				break;
 			case < 0x2400: _nes.Vram[address - 0x2000 + _nt1Offset] = value; break;
 			case < 0x2800: _nes.Vram[address - 0x2400 + _nt2Offset] = value; break;
 			case < 0x2C00: _nes.Vram[address - 0x2800 + _nt3Offset] = value; break;

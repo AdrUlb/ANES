@@ -1,5 +1,7 @@
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Drawing;
+using System.Net;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ANES.Emulation;
@@ -74,8 +76,6 @@ public sealed class Ppu(Nes nes)
 	private readonly bool[] _spritePixelsBehindBackground = new bool[PictureWidth];
 	private readonly bool[] _spritePixelsSprite0 = new bool[PictureWidth];
 
-	private readonly byte[] _palette = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Composite_wiki.pal"));
-
 	internal readonly byte[] Oam = new byte[256];
 	internal readonly byte[] _secondaryOam = new byte[32];
 	public readonly Color[] Picture = new Color[PictureWidth * PictureHeight];
@@ -120,13 +120,21 @@ public sealed class Ppu(Nes nes)
 					// TODO: During rendering (on the pre-render line and the visible lines 0-239, provided either background or sprite rendering is enabled),
 					//	it will update v in an odd way, triggering a coarse X increment and a Y increment simultaneously (with normal wrapping behavior).
 					ret = _dataReadBuffer;
-					_dataReadBuffer = nes.PpuBus.ReadByte((ushort)(_regV & 0b11_1111_1111_1111));
+					_dataReadBuffer = nes.PpuBus.ReadByte((ushort)(_regV & 0b111111_11111111));
 					if (!suppressSideEffects)
 					{
-						if (_ctrlVramIncrement32)
+
+						if (_scanline is < 240 or 26 && IsRenderingEnabled)
+						{
+							IncrementCoarseX();
+							IncrementY();
+						}
+						else if (_ctrlVramIncrement32)
 							_regV += 32;
 						else
 							_regV++;
+
+						_regV &= 0b1111111_11111111;
 					}
 					break;
 				}
@@ -212,14 +220,23 @@ public sealed class Ppu(Nes nes)
 				break;
 			case 7: // PPUDATA
 					// Note that while the v register has 15 bits, the PPU memory space is only 14 bits wide. The highest bit is unused for access through $2007.
-					// TODO: During rendering (on the pre-render line and the visible lines 0-239, provided either background or sprite rendering is enabled),
-					//	it will update v in an odd way, triggering a coarse X increment and a Y increment simultaneously (with normal wrapping behavior).
-					//	see: https://www.nesdev.org/wiki/PPU_scrolling#$2007_(PPUDATA)_reads_and_writes
 				nes.PpuBus.WriteByte((ushort)(_regV & 0b11_1111_1111_1111), value);
-				if (_ctrlVramIncrement32)
-					_regV += 32;
+
+				if (_scanline is < 240 or 26 && IsRenderingEnabled)
+				{
+					IncrementCoarseX();
+					IncrementY();
+				}
 				else
-					_regV++;
+				{
+
+					if (_ctrlVramIncrement32)
+						_regV += 32;
+					else
+						_regV++;
+
+					_regV &= 0b1111111_11111111;
+				}
 				break;
 		}
 	}
@@ -288,7 +305,7 @@ public sealed class Ppu(Nes nes)
 		}
 
 		// Cycles 65-256: Sprite evaluation
-		if (_scanline != 261 && _cycle is >= 65 and <= 256)
+		if (_scanline != 261 && _cycle is >= 65 and <= 256 && IsRenderingEnabled)
 		{
 
 			if (_cycle % 2 == 1) // On odd cycles, data is read from (primary) OAM
@@ -370,14 +387,14 @@ public sealed class Ppu(Nes nes)
 			OutputDot();
 		}
 
-		if (_cycle is >= 1 and <= 336)
-		{
-			_bgPatternLowShifter <<= 1;
-			_bgPatternHighShifter <<= 1;
-		}
-
 		if (_cycle is (>= 1 and <= 256) or >= 321 && IsRenderingEnabled)
 		{
+			if (_cycle is >= 1 and <= 336)
+			{
+				_bgPatternLowShifter <<= 1;
+				_bgPatternHighShifter <<= 1;
+			}
+
 			// https://www.nesdev.org/wiki/PPU_scrolling#Tile_and_attribute_fetching
 			// The data for each tile is fetched during this phase. Each memory access takes 2 PPU cycles to complete, and 4 must be performed per tile
 			// The data fetched from these accesses is placed into internal latches, and then fed to the appropriate shift registers when it's time to do so (every 8 cycles).
@@ -444,7 +461,6 @@ public sealed class Ppu(Nes nes)
 						_bgPatternLowShifter |= _bgPatternLowFetch;
 						_bgPatternHighShifter |= _bgPatternHighFetch;
 						IncrementCoarseX();
-
 					}
 					break;
 			}
@@ -488,7 +504,7 @@ public sealed class Ppu(Nes nes)
 
 	private Color GetPaletteColor(int paletteIndex)
 	{
-		return Color.FromArgb(_palette[paletteIndex * 3 + 0], _palette[paletteIndex * 3 + 1], _palette[paletteIndex * 3 + 2]); ;
+		return Color.FromArgb(nes.Palette[paletteIndex * 3 + 0], nes.Palette[paletteIndex * 3 + 1], nes.Palette[paletteIndex * 3 + 2]); ;
 	}
 
 	private void OutputDot()
@@ -501,7 +517,7 @@ public sealed class Ppu(Nes nes)
 		var pattern = (patternHigh << 1) | patternLow;
 
 		var x = _cycle - 1;
-		var shift = _regX > 8 - (x % 8) ? 0 : 2;
+		var shift = _regX > 7 - (x % 8) ? 0 : 2;
 		var palette = (_bgPaletteShifter >> shift) & 0b11;
 
 		var spritePixel = _spritePixels[_cycle - 1];
@@ -528,7 +544,7 @@ public sealed class Ppu(Nes nes)
 				3 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * palette + 3))),
 				_ => throw new UnreachableException()
 			};
-			paletteIndex %= _palette.Length / 3;
+			paletteIndex %= nes.Palette.Length / 3;
 			pixel = GetPaletteColor(paletteIndex);
 		}
 
@@ -575,6 +591,9 @@ public sealed class Ppu(Nes nes)
 				if (xx >= PictureWidth)
 					break;
 
+				if (_spritePixels[xx] != Color.Transparent)
+					continue;
+
 				var shift = flipX ? tileX : (7 - tileX);
 				var pattern = (((patternHigh >> shift) & 1) << 1) | ((patternLow >> shift) & 1);
 
@@ -592,9 +611,9 @@ public sealed class Ppu(Nes nes)
 					_ => throw new UnreachableException()
 				};
 
-				paletteIndex %= _palette.Length / 3;
+				paletteIndex %= nes.Palette.Length / 3;
 
-				_spritePixels[xx] = Color.FromArgb(_palette[paletteIndex * 3 + 0], _palette[paletteIndex * 3 + 1], _palette[paletteIndex * 3 + 2]);
+				_spritePixels[xx] = Color.FromArgb(nes.Palette[paletteIndex * 3 + 0], nes.Palette[paletteIndex * 3 + 1], nes.Palette[paletteIndex * 3 + 2]);
 				_spritePixelsBehindBackground[xx] = behindBackground;
 				_spritePixelsSprite0[xx] = _sprite0Copied && i == 0;
 			}

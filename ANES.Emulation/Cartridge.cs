@@ -2,9 +2,9 @@ using ANES.Emulation.Mappers;
 
 namespace ANES.Emulation;
 
-internal sealed class Cartridge
+public sealed class Cartridge
 {
-	private readonly IMapper _mapper;
+	public readonly IMapper _mapper;
 
 	public Cartridge(Nes nes, string romFilePath)
 	{
@@ -78,8 +78,8 @@ internal sealed class Cartridge
 			throw new NotSupportedException();
 
 		int chrRomBytes;
-		int chrRamBytes;
-		int chrNvramBytes;
+		int chrRamBytes = 0;
+		int chrNvramBytes = 0;
 
 		// NES 2.0: The CHR-ROM Area, if present, follows the Trainer and PRG-ROM Areas and precedes the Miscellaneous ROM Area.
 		// Header byte 5 (LSB) and bits 4-7 of Header byte 9 (MSB) specify its size.
@@ -111,8 +111,14 @@ internal sealed class Cartridge
 			chrRomBytes = 8 * 1024 * b5;
 
 			if (b5 == 0)
-				throw new NotSupportedException();
+			{
+				chrRamBytes = 8 * 1024;
+				chrRomBytes = 0;
+			}
 		}
+
+		if (chrNvramBytes != 0)
+			throw new NotSupportedException();
 
 		var nametableLayout = (b6 & 1) == 0 ? NametableLayout.MirrorHorizonally : NametableLayout.MirrorVertically;
 
@@ -149,11 +155,12 @@ internal sealed class Cartridge
 		Console.WriteLine($"ROM Format: {(isNes20 ? "NES 2.0" : "iNES")}");
 		Console.WriteLine($"PRG ROM: {prgRomBytes} bytes");
 		Console.WriteLine($"CHR ROM: {chrRomBytes} bytes");
+		Console.WriteLine($"CHR RAM: {chrRamBytes} bytes");
 		Console.WriteLine($"Nametable layout: {nametableLayout}");
 
 		_mapper = mapperNumber switch
 		{
-			0 => new Mapper0(nes, prgRom, chrRom, nametableLayout),
+			0 => new Mapper0(nes, prgRom, chrRom, chrRamBytes, nametableLayout),
 			_ => throw new NotSupportedException($"Mapper number {mapperNumber} is not supported.")
 		};
 

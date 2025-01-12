@@ -15,20 +15,24 @@ public sealed class Nes : Computer
 	private readonly Lock _startStopLock = new();
 	private bool _keepRunning = false;
 
+	public readonly byte[] Palette = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Composite_wiki.pal"));
+
 	internal readonly byte[] Ram = new byte[0x800];
 	internal readonly byte[] Vram = new byte[0x800];
-	internal readonly byte[] PaletteRam = new byte[0x20];
+	public readonly byte[] PaletteRam = new byte[0x20];
 
 	public override CpuBus CpuBus { get; }
 
-	internal PpuBus PpuBus { get; }
+	public PpuBus PpuBus { get; }
 
-	internal Cartridge? Cartridge = null;
+	public Cartridge? Cartridge = null;
 	public readonly Controllers Controllers = new();
 	public readonly Ppu Ppu;
 	private readonly Cpu _cpu;
 
 	public event EventHandler? FrameReady;
+
+	private int _dmaLeft = 0;
 
 	public Nes()
 	{
@@ -43,6 +47,7 @@ public sealed class Nes : Computer
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static unsafe void WaitUntil(Func<bool> predicate)
 	{
+		//while (!predicate()) { }
 		SpinWait.SpinUntil(predicate);
 	}
 
@@ -70,6 +75,8 @@ public sealed class Nes : Computer
 			Ppu.WriteReg(4, value);
 			address++;
 		}
+
+		_dmaLeft = 512;
 	}
 
 	private void ThreadProc()
@@ -92,7 +99,12 @@ public sealed class Nes : Computer
 
 				if (tick % 3 == 0)
 				{
-					_cpu.Tick();
+					if (_dmaLeft != 0)
+					{
+						_dmaLeft--;
+					}
+					else
+						_cpu.Tick();
 					// NOTE: signal IRQs AFTER CPU tick
 					// maybe NMIs before?
 				}
@@ -103,9 +115,9 @@ public sealed class Nes : Computer
 
 			ticks -= _ppuTicksPerFrame;
 
-			/*var millisecondsToSpare = (timestamp - Stopwatch.GetTimestamp()) * 1000.0 / Stopwatch.Frequency;
+			var millisecondsToSpare = (timestamp - Stopwatch.GetTimestamp()) * 1000.0 / Stopwatch.Frequency;
 			var millisecondsTaken = _millisPerFrame - millisecondsToSpare;
-			Console.WriteLine($"Emulated frame took {millisecondsTaken:0.00}ms ({millisecondsToSpare:0.00}ms to spare)");*/
+			//Console.WriteLine($"Emulated frame took {millisecondsTaken:0.00}ms ({millisecondsToSpare:0.00}ms to spare)");
 
 			WaitUntil(NextFrame);
 		}

@@ -27,7 +27,7 @@ internal sealed class App() : SdlApp(SdlInitFlags.Video)
 		_anesRenderer = new(_nes, _renderer);
 
 		_nes.Start();
-		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\pacman.nes");
+		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\smb1.nes");
 		_nes.Reset();
 
 		return SdlAppResult.Continue;

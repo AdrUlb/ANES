@@ -1,6 +1,6 @@
 namespace ANES.Emulation.Mappers;
 
-internal interface IMapper
+public interface IMapper
 {
 	public string Name { get; }
 
