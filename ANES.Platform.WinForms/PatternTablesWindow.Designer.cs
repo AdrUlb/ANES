@@ -46,9 +46,10 @@ partial class PatternTablesWindow
 		// 
 		patternSdl0.BackColor = Color.Black;
 		patternSdl0.Dock = DockStyle.Fill;
-		patternSdl0.Location = new Point(8, 24);
+		patternSdl0.Location = new Point(12, 28);
 		patternSdl0.Name = "patternSdl0";
-		patternSdl0.Size = new Size(124, 124);
+		patternSdl0.Padding = new Padding(12);
+		patternSdl0.Size = new Size(131, 125);
 		patternSdl0.TabIndex = 0;
 		// 
 		// myMenuStrip1
@@ -56,6 +57,7 @@ partial class PatternTablesWindow
 		myMenuStrip1.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, viewToolStripMenuItem });
 		myMenuStrip1.Location = new Point(0, 0);
 		myMenuStrip1.Name = "myMenuStrip1";
+		myMenuStrip1.Padding = new Padding(0);
 		myMenuStrip1.Size = new Size(382, 24);
 		myMenuStrip1.TabIndex = 1;
 		myMenuStrip1.Text = "myMenuStrip1";
@@ -64,7 +66,7 @@ partial class PatternTablesWindow
 		// 
 		fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { mainMenuFileExit });
 		fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-		fileToolStripMenuItem.Size = new Size(37, 20);
+		fileToolStripMenuItem.Size = new Size(37, 24);
 		fileToolStripMenuItem.Text = "&File";
 		// 
 		// mainMenuFileExit
@@ -78,7 +80,7 @@ partial class PatternTablesWindow
 		// 
 		viewToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { mainMenuViewScale });
 		viewToolStripMenuItem.Name = "viewToolStripMenuItem";
-		viewToolStripMenuItem.Size = new Size(44, 20);
+		viewToolStripMenuItem.Size = new Size(44, 24);
 		viewToolStripMenuItem.Text = "&View";
 		// 
 		// mainMenuViewScale
@@ -90,10 +92,10 @@ partial class PatternTablesWindow
 		// patternGroup0
 		// 
 		patternGroup0.Controls.Add(patternSdl0);
-		patternGroup0.Location = new Point(37, 58);
+		patternGroup0.Location = new Point(35, 47);
 		patternGroup0.Name = "patternGroup0";
-		patternGroup0.Padding = new Padding(8);
-		patternGroup0.Size = new Size(140, 156);
+		patternGroup0.Padding = new Padding(12);
+		patternGroup0.Size = new Size(155, 165);
 		patternGroup0.TabIndex = 2;
 		patternGroup0.TabStop = false;
 		patternGroup0.Text = "Pattern Table 0x0000";
@@ -101,10 +103,10 @@ partial class PatternTablesWindow
 		// patternGroup1
 		// 
 		patternGroup1.Controls.Add(patternSdl1);
-		patternGroup1.Location = new Point(205, 58);
+		patternGroup1.Location = new Point(209, 46);
 		patternGroup1.Name = "patternGroup1";
-		patternGroup1.Padding = new Padding(8);
-		patternGroup1.Size = new Size(140, 156);
+		patternGroup1.Padding = new Padding(12);
+		patternGroup1.Size = new Size(161, 166);
 		patternGroup1.TabIndex = 3;
 		patternGroup1.TabStop = false;
 		patternGroup1.Text = "Pattern Table 0x1000";
@@ -113,9 +115,9 @@ partial class PatternTablesWindow
 		// 
 		patternSdl1.BackColor = Color.Black;
 		patternSdl1.Dock = DockStyle.Fill;
-		patternSdl1.Location = new Point(8, 24);
+		patternSdl1.Location = new Point(12, 28);
 		patternSdl1.Name = "patternSdl1";
-		patternSdl1.Size = new Size(124, 124);
+		patternSdl1.Size = new Size(137, 126);
 		patternSdl1.TabIndex = 0;
 		// 
 		// PatternTablesWindow
@@ -126,7 +128,6 @@ partial class PatternTablesWindow
 		Controls.Add(patternGroup1);
 		Controls.Add(patternGroup0);
 		Controls.Add(myMenuStrip1);
-		FormBorderStyle = FormBorderStyle.FixedSingle;
 		MainMenuStrip = myMenuStrip1;
 		MaximizeBox = false;
 		MdiChildrenMinimizedAnchorBottom = false;

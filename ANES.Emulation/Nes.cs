@@ -30,9 +30,11 @@ public sealed class Nes : Computer
 	public readonly Ppu Ppu;
 	private readonly Cpu _cpu;
 
-	public event EventHandler? FrameReady;
+	public event EventHandler? Frame;
 
 	private int _dmaLeft = 0;
+	private ulong _tick = 0;
+	private bool _frameDone = false;
 
 	public Nes()
 	{
@@ -41,7 +43,8 @@ public sealed class Nes : Computer
 		Ppu = new(this);
 		_cpu = new(this);
 
-		Ppu.Vblank += VblankHandler;
+		Ppu.Nmi += PpuNmiHandler;
+		Ppu.Frame += PpuFrameHandler;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -51,13 +54,15 @@ public sealed class Nes : Computer
 		//SpinWait.SpinUntil(predicate);
 	}
 
-	private void VblankHandler(object? sender, PpuVblankEventArgs e)
+	private void PpuNmiHandler(object? sender, EventArgs e)
 	{
-		if (e.Nmi)
-			_cpu.RaiseNmi();
+		_cpu.RaiseNmi();
+	}
 
-		if (e.Frame)
-			FrameReady?.Invoke(this, EventArgs.Empty);
+	private void PpuFrameHandler(object? sender, EventArgs e)
+	{
+		Frame?.Invoke(this, e);
+		_frameDone = true;
 	}
 
 	public void InsertCartridge(string romFilePath)
@@ -81,48 +86,44 @@ public sealed class Nes : Computer
 
 	private void ThreadProc()
 	{
-		ulong tick = 0;
-		double ticks = 0;
-		var start = Stopwatch.StartNew();
-
-		double timestamp = Stopwatch.GetTimestamp();
-
-		// TODO: skip frames if necessary
+		double nextFrameStart = Stopwatch.GetTimestamp();
 
 		while (_keepRunning)
 		{
-			timestamp += Stopwatch.Frequency / _framesPerSecond;
+			nextFrameStart += Stopwatch.Frequency / _framesPerSecond;
 
-			while (ticks < _ppuTicksPerFrame)
-			{
-				Ppu.Tick();
+			while (!_frameDone)
+				Tick();
 
-				if (tick % 3 == 0)
-				{
-					if (_dmaLeft != 0)
-					{
-						_dmaLeft--;
-					}
-					else
-						_cpu.Tick();
-					// NOTE: signal IRQs AFTER CPU tick
-					// maybe NMIs before?
-				}
-
-				tick++;
-				ticks++;
-			}
-
-			ticks -= _ppuTicksPerFrame;
-
-			var millisecondsToSpare = (timestamp - Stopwatch.GetTimestamp()) * 1000.0 / Stopwatch.Frequency;
+			var swTicksToSpare = nextFrameStart - Stopwatch.GetTimestamp();
+			var millisecondsToSpare = swTicksToSpare * 1000.0 / Stopwatch.Frequency;
 			var millisecondsTaken = _millisPerFrame - millisecondsToSpare;
-			//Console.WriteLine($"Emulated frame took {millisecondsTaken:0.00}ms ({millisecondsToSpare:0.00}ms to spare)");
+			Console.WriteLine($"Emulated frame took {millisecondsTaken:0.00}ms ({millisecondsToSpare:0.00}ms to spare)");
 
 			WaitUntil(NextFrame);
+			_frameDone = false;
 		}
 
-		bool NextFrame() => Stopwatch.GetTimestamp() >= timestamp;
+		bool NextFrame() => Stopwatch.GetTimestamp() >= nextFrameStart;
+	}
+
+	private void Tick()
+	{
+		Ppu.Tick();
+
+		if (_tick % 3 == 0)
+		{
+			if (_dmaLeft == 0)
+			{
+				_cpu.Tick();
+			}
+			else
+				_dmaLeft--;
+			// NOTE: signal IRQs AFTER CPU tick
+			// maybe NMIs before?
+		}
+
+		_tick++;
 	}
 
 	/// <summary>
@@ -154,5 +155,6 @@ public sealed class Nes : Computer
 	{
 		_cpu.Reset();
 		Ppu.Reset();
+		_tick = 0;
 	}
 }

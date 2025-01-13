@@ -7,7 +7,7 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<OutputType>WinExe</OutputType>
+		<OutputType>Exe</OutputType>
 		<TargetFramework>net9.0-windows</TargetFramework>
 		<AssemblyName>ANES</AssemblyName>
 		<Nullable>enable</Nullable>

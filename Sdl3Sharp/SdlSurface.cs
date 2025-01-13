@@ -45,7 +45,7 @@ public class SdlSurface
 		Handle = handle;
 	}
 
-	public unsafe Span<T> GetPixels<T>(int row) where T : unmanaged => new(Data->Pixels + (row * Pitch), Pitch / sizeof(T));
+	public unsafe Span<T> GetPixelsRowSpan<T>(int row) where T : unmanaged => new(Data->Pixels + (row * Pitch), Pitch / sizeof(T));
 
 	public unsafe void Blit(Rectangle sourceRect, SdlSurface target, Rectangle targetRect)
 	{

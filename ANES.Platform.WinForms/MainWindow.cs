@@ -62,19 +62,14 @@ public partial class MainWindow : Form
 	private void RenderProc()
 	{
 		while (!_quit)
-		{
-			_sdlRenderer.SetDrawColor(Color.Black);
-			_sdlRenderer.Clear();
-			_anesRenderer.Render();
 			_patternTablesWindow?.Render();
-			_sdlRenderer.Present();
-		}
 	}
 
 	protected override void OnLoad(EventArgs e)
 	{
 		if (sdlControl.SdlWindow == null)
 			throw new UnreachableException();
+
 		_sdlRenderer = SdlRenderer.Create(sdlControl.SdlWindow);
 		_anesRenderer = new(_nes, _sdlRenderer);
 		_renderThread.Start();
@@ -146,14 +141,15 @@ public partial class MainWindow : Form
 	protected override void OnFormClosing(FormClosingEventArgs e)
 	{
 		Hide();
+
 		_quit = true;
-		SpinWait.SpinUntil(() => !_renderThread.IsAlive);
+		_nes.Stop();
 		_anesRenderer.Dispose();
 		_sdlRenderer.Destroy();
 
 		base.OnFormClosing(e);
 
-		_nes.Stop();
+		SpinWait.SpinUntil(() => !_renderThread.IsAlive);
 	}
 
 	private void mainMenuFileExit_Click(object sender, EventArgs e)

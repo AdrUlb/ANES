@@ -16,9 +16,7 @@ public sealed class AnesSdlRenderer : IDisposable
 
 	private readonly SdlRenderer _renderer;
 	private SdlTexture _screen = null!;
-	private volatile bool _waitingForFrame = true;
 	private volatile bool _disposed = false;
-
 
 	public AnesSdlRenderer(Nes nes, SdlRenderer renderer)
 	{
@@ -34,40 +32,34 @@ public sealed class AnesSdlRenderer : IDisposable
 		_screen.SetScaleMode(SdlScaleMode.Nearest);
 		tilesTexProps.Destroy();
 
-		_nes.FrameReady += OnFrameReady;
+		_nes.Frame += OnFrameReady;
 	}
 
 	private void OnFrameReady(object? sender, EventArgs e)
 	{
-		_waitingForFrame = false;
-		Nes.WaitUntil(FrameRendered);
-
-		bool FrameRendered() => _waitingForFrame || _disposed;
+		Render();
 	}
 
 	public void Render()
 	{
-		Nes.WaitUntil(FrameReady);
-
 		if (_disposed)
 			return;
 
 		var surface = _screen.LockToSurface();
 		for (var y = 0; y < Ppu.PictureHeight; y++)
 		{
-			var row = surface.GetPixels<int>(y);
+			var row = surface.GetPixelsRowSpan<int>(y);
 			for (var x = 0; x < ScreenWidth; x++)
 				row[x] = _nes.Ppu.Picture[x + y * Ppu.PictureWidth].ToArgb();
 		}
 		_screen.Unlock();
 
-		_waitingForFrame = true;
-
 		var srcRect = new RectangleF(0, _screenOffsetTop, ScreenWidth, ScreenHeight);
 
+		_renderer.SetDrawColor(Color.Black);
+		_renderer.Clear();
 		_screen.Render(srcRect, RectangleF.Empty);
-
-		bool FrameReady() => !_waitingForFrame || _disposed;
+		_renderer.Present();
 	}
 
 	public static void SetRuntimeImportResolver() => NativeLibrary.SetDllImportResolver(typeof(SdlApp).Assembly, SdlImportResolver);
@@ -98,7 +90,7 @@ public sealed class AnesSdlRenderer : IDisposable
 
 	public void Dispose()
 	{
-		_nes.FrameReady -= OnFrameReady;
+		_nes.Frame -= OnFrameReady;
 
 		_disposed = true;
 		_screen.Destroy();

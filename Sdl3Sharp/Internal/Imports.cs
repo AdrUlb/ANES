@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using static System.Net.Mime.MediaTypeNames;
 using SDL_PropertiesID = uint;
 
 namespace Sdl3Sharp.Internal;

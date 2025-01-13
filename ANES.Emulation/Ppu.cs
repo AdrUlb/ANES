@@ -83,7 +83,8 @@ public sealed class Ppu(Nes nes)
 
 	private bool IsRenderingEnabled => _maskEnableBackground || _maskEnableSprites;
 
-	public event EventHandler<PpuVblankEventArgs>? Vblank;
+	public event EventHandler? Nmi;
+	public event EventHandler? Frame;
 
 	internal byte ReadReg(int index, bool suppressSideEffects = false)
 	{
@@ -158,8 +159,7 @@ public sealed class Ppu(Nes nes)
 
 				// Changing NMI enable from 0 to 1 while the vblank flag in PPUSTATUS is 1 will immediately trigger an NMI.
 				if (!prevNmiEnable && _ctrlVblankNmiEnable && _statusVblank)
-					Vblank?.Invoke(this, new(false, true));
-
+					Nmi?.Invoke(this, EventArgs.Empty);
 				break;
 			case 1: // PPUMASK
 				_maskGrayscale = (value & 1) != 0;
@@ -255,6 +255,7 @@ public sealed class Ppu(Nes nes)
 				_scanline = 0;
 				_pictureIndex = 0;
 				_oddFrame = !_oddFrame;
+				Frame?.Invoke(this, EventArgs.Empty);
 			}
 		}
 	}
@@ -274,7 +275,8 @@ public sealed class Ppu(Nes nes)
 			// Set Vblank flag
 			_statusVblank = true;
 
-			Vblank?.Invoke(this, new(true, _ctrlVblankNmiEnable));
+			if (_ctrlVblankNmiEnable)
+				Nmi?.Invoke(this, EventArgs.Empty);
 
 			return;
 		}

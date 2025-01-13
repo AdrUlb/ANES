@@ -1,20 +1,22 @@
 ﻿using ANES.Emulation;
+using ANES.Rendering.Sdl3;
 using Sdl3Sharp;
 using System.Diagnostics;
-using System.Windows.Forms;
 
 namespace ANES.Platform.WinForms;
 
 public partial class PatternTablesWindow : Form
 {
+	const int _padding = 12;
+
 	private readonly Nes _nes;
 
 	private readonly Thread _renderThread;
 
 	private SdlRenderer _patternRenderer0 = null!;
 	private SdlRenderer _patternRenderer1 = null!;
-	private SdlTexture _patternTexture0 = null!;
-	private SdlTexture _patternTexture1 = null!;
+	private AnesSdlPixels _patternPixels0 = null!;
+	private AnesSdlPixels _patternPixels1 = null!;
 
 	private volatile bool _quit = false;
 
@@ -29,7 +31,7 @@ public partial class PatternTablesWindow : Form
 		InitializeComponent();
 
 		// Add menu options for setting the scale to 1x-4x
-		for (var i = 1; i <= 4; i++)
+		for (var i = 1; i <= 5; i++)
 		{
 			var scale = i;
 			var item = new ToolStripMenuItem($"{i}x", null, (_, _) => SetScale(scale));
@@ -42,10 +44,30 @@ public partial class PatternTablesWindow : Form
 		_renderThread = new(Render);
 	}
 
-	private void CopyPatternTable(SdlTexture texture, int half)
+	private void SetScale(int scale)
 	{
+		var tableWidth = 16 * 8 * scale;
+		var tableHeight = 16 * 8 * scale;
+		var tableSize = new Size(tableWidth, tableHeight);
+		SetTableSize(tableSize, true);
+	}
 
-		var surface = texture.LockToSurface();
+	private void SetTableSize(Size size, bool changeWindowSize)
+	{
+		SuspendLayout();
+		patternGroup0.Size = size;
+		patternGroup1.Size = size;
+
+		patternGroup0.Location = new(_padding, myMenuStrip1.Height + _padding);
+		patternGroup1.Location = new(patternGroup0.Right + _padding, myMenuStrip1.Height + _padding);
+
+		if (changeWindowSize)
+			ClientSize = new(size.Width * 2 + 3 * _padding, size.Height + myMenuStrip1.Height + 2 * _padding);
+		ResumeLayout();
+	}
+
+	private void CopyPatternTable(AnesSdlPixels texture, int half)
+	{
 
 		for (var tileY = 0; tileY < 16; tileY++)
 		{
@@ -68,16 +90,13 @@ public partial class PatternTablesWindow : Form
 
 						var color = Color.FromArgb(255 * pattern / 3, 255 * pattern / 3, 255 * pattern / 3);
 
-						var row = surface.GetPixels<int>(tileY * 8 + y);
+						var row = texture.GetRowSpan<int>(tileY * 8 + y);
 						var pixel = (tileX * 8 + x);
 						row[pixel] = color.ToArgb();
 					}
 				}
 			}
 		}
-		texture.Unlock();
-
-		//var address = (half << 12) | (tileIndex << 4) | (bitPlane << 3) | y;
 	}
 
 	internal void Render()
@@ -87,35 +106,22 @@ public partial class PatternTablesWindow : Form
 			if (_quit)
 				return;
 
-			if (_patternTexture0 == null || _patternTexture1 == null)
+			if (_patternPixels0 == null || _patternPixels1 == null)
 				return;
 
-			CopyPatternTable(_patternTexture0, 0);
-			CopyPatternTable(_patternTexture1, 1);
+			CopyPatternTable(_patternPixels0, 0);
+			CopyPatternTable(_patternPixels1, 1);
 
 			_patternRenderer0.SetDrawColor(Color.Black);
 			_patternRenderer0.Clear();
-			_patternTexture0.Render();
+			_patternPixels0.Render();
 			_patternRenderer0.Present();
 
 			_patternRenderer1.SetDrawColor(Color.Black);
 			_patternRenderer1.Clear();
-			_patternTexture1.Render();
+			_patternPixels1.Render();
 			_patternRenderer1.Present();
 		}
-	}
-
-	private void SetScale(int scale)
-	{
-		SuspendLayout();
-		var size = new Size(16 * 8 * scale, 16 * 8 * scale);
-		patternGroup0.Size += size - patternSdl0.Size;
-		patternGroup1.Size += size - patternSdl1.Size;
-		patternGroup0.Location = new(8, myMenuStrip1.Height + 8);
-		patternGroup1.Location = new(patternGroup0.Right + 8, myMenuStrip1.Height + 8);
-
-		ClientSize = new(patternGroup1.Right + 8, patternGroup0.Bottom + 8);
-		ResumeLayout();
 	}
 
 	protected override void OnLoad(EventArgs e)
@@ -123,17 +129,20 @@ public partial class PatternTablesWindow : Form
 		_patternRenderer0 = SdlRenderer.Create(patternSdl0.SdlWindow ?? throw new UnreachableException());
 		_patternRenderer1 = SdlRenderer.Create(patternSdl1.SdlWindow ?? throw new UnreachableException());
 
-		var props = SdlProperties.Create();
-		props.Set(SdlProperties.TextureCreateAccess, (long)SdlTextureAccess.Streaming);
-		props.Set(SdlProperties.TextureCreateWidth, 16 * 8);
-		props.Set(SdlProperties.TextureCreateHeight, 16 * 8);
-		props.Set(SdlProperties.TextureCreateFormat, (long)SdlPixelFormat.Argb8888);
-		_patternTexture0 = SdlTexture.CreateWithProperties(_patternRenderer0, props);
-		_patternTexture0.SetScaleMode(SdlScaleMode.Nearest);
-		_patternTexture1 = SdlTexture.CreateWithProperties(_patternRenderer1, props);
-		_patternTexture1.SetScaleMode(SdlScaleMode.Nearest);
+		_patternPixels0 = new(_patternRenderer0, 16 * 8, 16 * 8);
+		_patternPixels1 = new(_patternRenderer1, 16 * 8, 16 * 8);
 
 		_renderThread.Start();
+	}
+
+	protected override void OnSizeChanged(EventArgs e)
+	{
+		var tableWidth = (ClientSize.Width - 3 * _padding) / 2;
+		var tableHeight = ClientSize.Height - myMenuStrip1.Height - 2 * _padding;
+		var tableSize = new Size(tableWidth, tableHeight);
+		SetTableSize(tableSize, false);
+		
+		base.OnSizeChanged(e);
 	}
 
 	protected override void OnFormClosing(FormClosingEventArgs e)
