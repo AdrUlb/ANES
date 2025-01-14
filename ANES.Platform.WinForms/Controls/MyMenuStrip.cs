@@ -1,6 +1,6 @@
 ﻿namespace ANES.Platform.WinForms.Controls;
 
-internal class MyMenuStrip : MenuStrip
+internal sealed class MyMenuStrip : MenuStrip
 {
 	public MyMenuStrip()
 	{

@@ -19,7 +19,7 @@ public struct SdlSurfaceData
 	private nint _reserved; // Reserved for internal use
 }
 
-public class SdlSurface
+public sealed class SdlSurface
 {
 	internal readonly nint Handle;
 

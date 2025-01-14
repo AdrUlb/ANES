@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace ANES.Emulation;
 
-internal class CpuOperation(CpuInstruction instruction, CpuAddressingMode addressingMode, bool isIllegal = false)
+internal sealed class CpuOperation(CpuInstruction instruction, CpuAddressingMode addressingMode, bool isIllegal = false)
 {
 	public static readonly CpuOperation None = new(CpuInstruction.None, 0);
 

@@ -15,24 +15,18 @@ public sealed class AnesSdlRenderer : IDisposable
 	public const int ScreenHeight = _palResolution ? 240 : 224;
 
 	private readonly SdlRenderer _renderer;
-	private SdlTexture _screen = null!;
+	private readonly AnesSdlPixels _screen;
 	private volatile bool _disposed = false;
+	public bool PauseRendering = false;
 
 	public AnesSdlRenderer(Nes nes, SdlRenderer renderer)
 	{
 		_nes = nes;
 		_renderer = renderer;
 
-		var tilesTexProps = SdlProperties.Create();
-		tilesTexProps.Set(SdlProperties.TextureCreateAccess, (long)SdlTextureAccess.Streaming);
-		tilesTexProps.Set(SdlProperties.TextureCreateWidth, Ppu.PictureWidth);
-		tilesTexProps.Set(SdlProperties.TextureCreateHeight, Ppu.PictureHeight);
-		tilesTexProps.Set(SdlProperties.TextureCreateFormat, (long)SdlPixelFormat.Argb8888);
-		_screen = SdlTexture.CreateWithProperties(_renderer, tilesTexProps);
-		_screen.SetScaleMode(SdlScaleMode.Nearest);
-		tilesTexProps.Destroy();
+		_screen = new(Ppu.PictureWidth, Ppu.PictureHeight, _renderer);
 
-		_nes.Frame += OnFrameReady;
+		_nes.Ppu.Frame += OnFrameReady;
 	}
 
 	private void OnFrameReady(object? sender, EventArgs e)
@@ -45,14 +39,15 @@ public sealed class AnesSdlRenderer : IDisposable
 		if (_disposed)
 			return;
 
-		var surface = _screen.LockToSurface();
+		if (PauseRendering)
+			return;
+
 		for (var y = 0; y < Ppu.PictureHeight; y++)
 		{
-			var row = surface.GetPixelsRowSpan<int>(y);
+			var row = _screen.GetRowSpan<int>(y);
 			for (var x = 0; x < ScreenWidth; x++)
 				row[x] = _nes.Ppu.Picture[x + y * Ppu.PictureWidth].ToArgb();
 		}
-		_screen.Unlock();
 
 		var srcRect = new RectangleF(0, _screenOffsetTop, ScreenWidth, ScreenHeight);
 
@@ -90,9 +85,9 @@ public sealed class AnesSdlRenderer : IDisposable
 
 	public void Dispose()
 	{
-		_nes.Frame -= OnFrameReady;
+		_nes.Ppu.Frame -= OnFrameReady;
 
 		_disposed = true;
-		_screen.Destroy();
+		_screen.Dispose();
 	}
 }

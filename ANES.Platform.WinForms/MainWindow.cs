@@ -1,4 +1,5 @@
 using ANES.Emulation;
+using ANES.Platform.WinForms.Controls;
 using ANES.Rendering.Sdl3;
 using Sdl3Sharp;
 using System.ComponentModel;
@@ -6,38 +7,123 @@ using System.Diagnostics;
 
 namespace ANES.Platform.WinForms;
 
-public partial class MainWindow : Form
+[DesignerCategory("")]
+internal sealed class MainWindow : Form
 {
-	private readonly Thread _renderThread;
-
 	private readonly Nes _nes = new();
+
+	private SdlControl _sdlControl = new();
 	private SdlRenderer _sdlRenderer = null!;
-	private AnesSdlRenderer _anesRenderer = null!;
-
-	private volatile bool _quit = false;
-
+	private AnesSdlRenderer? _anesRenderer;
 	private PatternTablesWindow? _patternTablesWindow = null;
 
 	public MainWindow()
 	{
-		SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
+		_nes.Ppu.Frame += OnFrameReady;
 
 		AnesSdlRenderer.SetRuntimeImportResolver();
-
-		InitializeComponent();
+		SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
 
 		SuspendLayout();
-		// Add menu options for setting the scale to 1x-8x
+
+		_sdlControl.Dock = DockStyle.Fill;
+
+		Text = "ANES";
+
+		var mainMenu = CreateMainMenu();
+
+		Controls.AddRange(_sdlControl, mainMenu);
+
+		MainMenuStrip = mainMenu;
+
+		ResumeLayout();
+	}
+
+	private MyMenuStrip CreateMainMenu()
+	{
+		var mainMenu = new MyMenuStrip();
+		mainMenu.SuspendLayout();
+		mainMenu.Items.AddRange(
+			CreateMainMenuFile(),
+			CreateMainMenuView(),
+			CreateMainMenuDebug(),
+			CreateMainMenuHelp()
+		);
+		mainMenu.ResumeLayout(false);
+		return mainMenu;
+	}
+
+	private ToolStripMenuItem CreateMainMenuFile()
+	{
+		var itemOpen = new ToolStripMenuItem
+		{
+			ShortcutKeys = Keys.Control | Keys.O,
+			Text = "&Open"
+		};
+		itemOpen.Click += (_, _) => LoadRomDialog();
+
+		var itemExit = new ToolStripMenuItem
+		{
+			ShortcutKeys = Keys.Control | Keys.Q,
+			Text = "E&xit"
+		};
+		itemExit.Click += (_, _) => Close();
+
+		var item = new ToolStripMenuItem();
+		item.DropDownItems.AddRange(itemOpen, new ToolStripSeparator(), itemExit);
+		item.Text = "&File";
+		return item;
+	}
+
+	private ToolStripMenuItem CreateMainMenuView()
+	{
+		var itemScale = new ToolStripMenuItem
+		{
+			Text = "&Scale"
+		};
+
 		for (var i = 1; i <= 8; i++)
 		{
 			var scale = i;
-			var item = new ToolStripMenuItem($"{i}x", null, (_, _) => SetScale(scale));
-			mainMenuViewScale.DropDownItems.Add(item);
+			var itemScaleX = new ToolStripMenuItem($"{i}x", null, (_, _) => SetScale(scale));
+			itemScale.DropDownItems.Add(itemScaleX);
 		}
-		SetScale(2);
-		ResumeLayout();
 
-		_renderThread = new(RenderProc);
+		var item = new ToolStripMenuItem
+		{
+			Text = "&View"
+		};
+		item.DropDownItems.Add(itemScale);
+		return item;
+	}
+
+	private ToolStripMenuItem CreateMainMenuDebug()
+	{
+		var itemPatternTables = new ToolStripMenuItem
+		{
+			Text = "&Pattern Tables"
+		};
+		itemPatternTables.Click += (_, _) => ShowPatternTable();
+
+		var item = new ToolStripMenuItem
+		{
+			Text = "&Debug"
+		};
+		item.DropDownItems.Add(itemPatternTables);
+		return item;
+	}
+
+	private static ToolStripMenuItem CreateMainMenuHelp()
+	{
+		var itemAbout = new ToolStripMenuItem
+		{
+			Text = "&About"
+		};
+
+		var item = new ToolStripMenuItem();
+		item.DropDownItems.Add(itemAbout);
+		item.Text = "&Help";
+		return item;
 	}
 
 	private void SetScale(int scale)
@@ -54,25 +140,25 @@ public partial class MainWindow : Form
 		scale = Math.Min(scale, maxScale);
 
 		// Adjust the window size to fit the NES screen
-		var newWidth = (AnesSdlRenderer.ScreenWidth * scale) - sdlControl.Width + ClientSize.Width;
-		var newHeight = (AnesSdlRenderer.ScreenHeight * scale) - sdlControl.Height + ClientSize.Height;
+		var newWidth = (AnesSdlRenderer.ScreenWidth * scale) - _sdlControl.Width + ClientSize.Width;
+		var newHeight = (AnesSdlRenderer.ScreenHeight * scale) - _sdlControl.Height + ClientSize.Height;
 		ClientSize = new Size(newWidth, newHeight);
 	}
 
-	private void RenderProc()
+	private void OnFrameReady(object? sender, EventArgs e)
 	{
-		while (!_quit)
-			_patternTablesWindow?.Render();
+		_patternTablesWindow?.Render();
 	}
 
 	protected override void OnLoad(EventArgs e)
 	{
-		if (sdlControl.SdlWindow == null)
+		SetScale(2);
+
+		if (_sdlControl.SdlWindow == null)
 			throw new UnreachableException();
 
-		_sdlRenderer = SdlRenderer.Create(sdlControl.SdlWindow);
+		_sdlRenderer = SdlRenderer.Create(_sdlControl.SdlWindow);
 		_anesRenderer = new(_nes, _sdlRenderer);
-		_renderThread.Start();
 		_nes.Start();
 	}
 
@@ -138,44 +224,52 @@ public partial class MainWindow : Form
 		}
 	}
 
+	protected override void OnResize(EventArgs e)
+	{
+		if (_anesRenderer != null)
+			_anesRenderer.PauseRendering = WindowState == FormWindowState.Minimized;
+
+		base.OnResize(e);
+	}
+
 	protected override void OnFormClosing(FormClosingEventArgs e)
 	{
 		Hide();
 
-		_quit = true;
 		_nes.Stop();
-		_anesRenderer.Dispose();
+		_anesRenderer?.Dispose();
 		_sdlRenderer.Destroy();
 
 		base.OnFormClosing(e);
-
-		SpinWait.SpinUntil(() => !_renderThread.IsAlive);
 	}
 
-	private void mainMenuFileExit_Click(object sender, EventArgs e)
+	private void LoadRomDialog()
 	{
-		Close();
-	}
+		var dialog = new OpenFileDialog
+		{
+			DefaultExt = "nes",
+			Filter = "NES files|*.nes"
+		};
 
-	private void mainMenuFileOpen_Click(object sender, EventArgs e)
-	{
-		var result = romOpenFIleDialog.ShowDialog();
+		var result = dialog.ShowDialog();
 
 		if (result != DialogResult.OK)
 			return;
 
-		var romFile = romOpenFIleDialog.FileName;
+		var romFile = dialog.FileName;
 		_nes.InsertCartridge(romFile);
 		_nes.Reset();
 	}
 
-	private void mainMenuDebugPatternTableViewer_Click(object sender, EventArgs e)
+	private void ShowPatternTable()
 	{
-		if (_patternTablesWindow == null || _patternTablesWindow.IsDisposed)
+		if (_patternTablesWindow != null && !_patternTablesWindow.IsDisposed)
 		{
-			_patternTablesWindow = new PatternTablesWindow(_nes);
-			_patternTablesWindow.Show();
+			_patternTablesWindow.Focus();
+			return;
 		}
-		else _patternTablesWindow.Focus();
+
+		_patternTablesWindow = new PatternTablesWindow(_nes);
+		_patternTablesWindow.Show();
 	}
 }

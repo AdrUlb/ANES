@@ -1,27 +1,39 @@
-﻿namespace ANES.Platform.WinForms.Controls;
+﻿using System.Drawing.Imaging.Effects;
 
-internal class MyToolStripRenderer : ToolStripRenderer
+namespace ANES.Platform.WinForms.Controls;
+
+#pragma warning disable WFO5001
+
+internal sealed class MyToolStripRenderer : ToolStripRenderer
 {
 	public static readonly MyToolStripRenderer Instance = new();
 
 	private MyToolStripRenderer() { }
 
+	private Color HighlightColor => Application.IsDarkModeEnabled ? Color.FromArgb(40, 40, 40) : SystemColors.Highlight;
+	private Color HighlightTextColor => Application.IsDarkModeEnabled ? SystemColors.ControlText : SystemColors.HighlightText;
+
 	protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
 	{
-		Rectangle bounds = e.AffectedBounds;
-
-		var backBrush = SystemBrushes.MenuBar;
-		e.Graphics.FillRectangle(backBrush, bounds);
+		e.Graphics.FillRectangle(SystemBrushes.MenuBar, e.AffectedBounds);
 		base.OnRenderToolStripBackground(e);
+	}
+
+	protected override void OnRenderArrow(ToolStripArrowRenderEventArgs e)
+	{
+		var item = e.Item;
+
+		if (item != null)
+			e.ArrowColor = item.Pressed || item.Selected ? HighlightTextColor : SystemColors.ControlText;
+
+		base.OnRenderArrow(e);
 	}
 
 	protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e)
 	{
-		Rectangle bounds = e.ToolStrip.ClientRectangle;
-
 		if (e.ToolStrip is ToolStripDropDown toolStripDropDown)
 		{
-			// Paint the border for the window depending on whether or not we have a drop shadow effect. 
+			var bounds = e.ToolStrip.ClientRectangle;
 			bounds.Width -= 1;
 			bounds.Height -= 1;
 			e.Graphics.DrawRectangle(SystemPens.ControlDark, bounds);
@@ -43,7 +55,7 @@ internal class MyToolStripRenderer : ToolStripRenderer
 	protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
 	{
 		if (e.Item.Selected || e.Item.Pressed)
-			e.TextColor = SystemColors.HighlightText;
+			e.TextColor = HighlightTextColor;
 		else
 			e.TextColor = SystemColors.ControlText;
 
@@ -56,24 +68,29 @@ internal class MyToolStripRenderer : ToolStripRenderer
 	{
 		base.OnRenderMenuItemBackground(e);
 
-		Rectangle fillRect = new Rectangle(Point.Empty, e.Item.Size);
+		var fillRect = new Rectangle(Point.Empty, e.Item.Size - new Size(1, 1));
+
 		if (e.Item.IsOnDropDown)
 		{
-			// VSWhidbey 518568: scoot in by 2 pixels when selected
 			fillRect.X += 2;
-			fillRect.Width -= 3; //its already 1 away from the right edge
+			fillRect.Width -= 3;
 		}
 
-		Brush brush;
+		if (!e.Item.Pressed && !e.Item.Selected)
+		{
+			e.Graphics.FillRectangle(SystemBrushes.MenuBar, fillRect);
+			return;
+		}
 
-		if (SystemInformation.HighContrast)
-		{
-			brush = e.Item.Pressed || e.Item.Selected ? SystemBrushes.Highlight : SystemBrushes.MenuBar;
-		}
-		else
-		{
-			brush = (e.Item.Pressed || e.Item.Selected) ? SystemBrushes.MenuHighlight : SystemBrushes.MenuBar;
-		}
-		e.Graphics.FillRectangle(brush, fillRect);
+		using (var br = new SolidBrush(HighlightColor))
+			e.Graphics.FillRectangle(br, fillRect);
+
+		if (e.Item.IsOnDropDown || !Application.IsDarkModeEnabled)
+			return;
+
+		using var pen = new Pen(Color.FromArgb(80, 80, 80));
+		e.Graphics.DrawRectangle(pen, fillRect);
+
 	}
 }
+#pragma warning restore WFO5001

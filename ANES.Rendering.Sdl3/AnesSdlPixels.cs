@@ -2,14 +2,14 @@
 using System.Drawing;
 
 namespace ANES.Rendering.Sdl3;
-public class AnesSdlPixels : IDisposable
+public sealed class AnesSdlPixels : IDisposable
 {
 	private readonly SdlTexture _texture;
 
 	private readonly Lock _lock = new();
 	private SdlSurface? _surface = null;
 
-	public AnesSdlPixels(SdlRenderer _renderer, int width, int height)
+	public AnesSdlPixels(int width, int height, SdlRenderer _renderer)
 	{
 		var props = SdlProperties.Create();
 		props.Set(SdlProperties.TextureCreateWidth, width);
@@ -54,19 +54,18 @@ public class AnesSdlPixels : IDisposable
 		}
 	}
 
-	public void Render()
+	public void Render(RectangleF sourceRect, RectangleF targetRect)
 	{
 		using (_lock.EnterScope())
 		{
 			UnlockIfNecessary();
-			_texture.Render();
+			_texture.Render(sourceRect, targetRect);
 		}
 	}
 
+	public void Render() => Render(RectangleF.Empty, RectangleF.Empty);
+
 	~AnesSdlPixels() => Dispose();
 
-	public void Dispose()
-	{
-		_texture.Destroy();
-	}
+	public void Dispose() => _texture.Destroy();
 }

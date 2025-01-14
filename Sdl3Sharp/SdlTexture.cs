@@ -4,7 +4,7 @@ using static Sdl3Sharp.Internal.Imports;
 
 namespace Sdl3Sharp;
 
-public class SdlTexture
+public sealed class SdlTexture
 {
 	private readonly SdlRenderer _renderer;
 	private readonly nint _handle;

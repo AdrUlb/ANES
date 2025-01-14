@@ -149,7 +149,8 @@ public sealed class Ppu(Nes nes)
 			case 0: // PPUCTRL
 				var prevNmiEnable = _ctrlVblankNmiEnable;
 
-				_regT = (ushort)((_regT & 0b111_0011_1111_1111) | ((value & 0b11) << 10));
+				_regT &= 0b1110011_11111111;
+				_regT |= (ushort)((value & 0b11) << 10);
 				_ctrlVramIncrement32 = ((value >> 2) & 1) != 0;
 				_ctrlSpritePatternTable = ((value >> 3) & 1) != 0;
 				_ctrlBackgroundPatternTable = ((value >> 4) & 1) != 0;
@@ -506,7 +507,7 @@ public sealed class Ppu(Nes nes)
 
 	private Color GetPaletteColor(int paletteIndex)
 	{
-		return Color.FromArgb(nes.Palette[paletteIndex * 3 + 0], nes.Palette[paletteIndex * 3 + 1], nes.Palette[paletteIndex * 3 + 2]); ;
+		return Color.FromArgb(nes.Palette[paletteIndex * 3 + 0], nes.Palette[paletteIndex * 3 + 1], nes.Palette[paletteIndex * 3 + 2]);
 	}
 
 	private void OutputDot()
@@ -538,26 +539,20 @@ public sealed class Ppu(Nes nes)
 		}
 		else
 		{
-			int paletteIndex = pattern switch
-			{
-				0 => nes.PpuBus.ReadByte(0x3F00),
-				1 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * palette + 1))),
-				2 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * palette + 2))),
-				3 => nes.PpuBus.ReadByte((ushort)(0x3F00 | (4 * palette + 3))),
-				_ => throw new UnreachableException()
-			};
+			var paletteIndexAddress = (ushort)(pattern == 0 ? 0x3F00 : 0x3F00 | ((4 * palette) + pattern));
+
+			int paletteIndex = nes.PpuBus.ReadByte(paletteIndexAddress);
 			paletteIndex %= nes.Palette.Length / 3;
 			pixel = GetPaletteColor(paletteIndex);
 		}
 
-		Picture[_pictureIndex] = pixel;
-
-		_pictureIndex++;
+		Picture[_pictureIndex++] = pixel;
 	}
 
 	private void FetchSprites()
 	{
-		_spritePixels.AsSpan().Fill(Color.Transparent);
+		for (var i = 0; i < _spritePixels.Length; i++)
+			_spritePixels[i] = Color.Transparent;
 
 		var patternHalf = _ctrlSpritePatternTable ? 1 : 0;
 
@@ -615,7 +610,7 @@ public sealed class Ppu(Nes nes)
 
 				paletteIndex %= nes.Palette.Length / 3;
 
-				_spritePixels[xx] = Color.FromArgb(nes.Palette[paletteIndex * 3 + 0], nes.Palette[paletteIndex * 3 + 1], nes.Palette[paletteIndex * 3 + 2]);
+				_spritePixels[xx] = GetPaletteColor(paletteIndex);
 				_spritePixelsBehindBackground[xx] = behindBackground;
 				_spritePixelsSprite0[xx] = _sprite0Copied && i == 0;
 			}

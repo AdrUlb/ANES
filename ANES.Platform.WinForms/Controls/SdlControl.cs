@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 
 namespace ANES.Platform.WinForms.Controls;
-internal partial class SdlControl : Control
+internal sealed partial class SdlControl : Control
 {
 	private const int SWP_NOSIZE = 0x0001;
 	private const int SWP_NOZORDER = 0x0004;
@@ -30,6 +30,7 @@ internal partial class SdlControl : Control
 	public SdlControl()
 	{
 		BackColor = Color.Black;
+		Size = new Size(400, 400);
 		SetStyle(ControlStyles.UserPaint, true);
 		SetStyle(ControlStyles.AllPaintingInWmPaint, true);
 		SetStyle(ControlStyles.OptimizedDoubleBuffer, true);

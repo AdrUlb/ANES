@@ -12,7 +12,7 @@ public sealed class Nes : Computer
 	private const double _ppuTicksPerFrame = _ppuTicksPerSecond / _framesPerSecond;
 
 	private Thread? _thread;
-	private readonly Lock _startStopLock = new();
+	private readonly Lock _lock = new();
 	private bool _keepRunning = false;
 
 	public readonly byte[] Palette = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Composite_wiki.pal"));
@@ -30,8 +30,6 @@ public sealed class Nes : Computer
 	public readonly Ppu Ppu;
 	private readonly Cpu _cpu;
 
-	public event EventHandler? Frame;
-
 	private int _dmaLeft = 0;
 	private ulong _tick = 0;
 	private bool _frameDone = false;
@@ -48,10 +46,10 @@ public sealed class Nes : Computer
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static unsafe void WaitUntil(Func<bool> predicate)
+	public static unsafe void WaitUntil(Func<bool> condition)
 	{
-		while (!predicate()) { }
-		//SpinWait.SpinUntil(predicate);
+		//while (!condition()) { }
+		SpinWait.SpinUntil(condition);
 	}
 
 	private void PpuNmiHandler(object? sender, EventArgs e)
@@ -61,7 +59,6 @@ public sealed class Nes : Computer
 
 	private void PpuFrameHandler(object? sender, EventArgs e)
 	{
-		Frame?.Invoke(this, e);
 		_frameDone = true;
 	}
 
@@ -86,19 +83,25 @@ public sealed class Nes : Computer
 
 	private void ThreadProc()
 	{
+		Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
+		Thread.CurrentThread.Priority = ThreadPriority.Highest;
+
 		double nextFrameStart = Stopwatch.GetTimestamp();
 
 		while (_keepRunning)
 		{
 			nextFrameStart += Stopwatch.Frequency / _framesPerSecond;
 
-			while (!_frameDone)
-				Tick();
+			using (_lock.EnterScope())
+			{
+				while (!_frameDone)
+					Tick();
+			}
 
 			var swTicksToSpare = nextFrameStart - Stopwatch.GetTimestamp();
 			var millisecondsToSpare = swTicksToSpare * 1000.0 / Stopwatch.Frequency;
 			var millisecondsTaken = _millisPerFrame - millisecondsToSpare;
-			Console.WriteLine($"Emulated frame took {millisecondsTaken:0.00}ms ({millisecondsToSpare:0.00}ms to spare)");
+			//Console.WriteLine($"Emulated frame took {millisecondsTaken:0.00}ms ({millisecondsToSpare:0.00}ms to spare)");
 
 			WaitUntil(NextFrame);
 			_frameDone = false;
@@ -131,7 +134,7 @@ public sealed class Nes : Computer
 	/// </summary>
 	public void Start()
 	{
-		using (_startStopLock.EnterScope())
+		using (_lock.EnterScope())
 		{
 			_thread = new(ThreadProc);
 			_keepRunning = true;
@@ -144,7 +147,7 @@ public sealed class Nes : Computer
 	/// </summary>
 	public void Stop()
 	{
-		using (_startStopLock.EnterScope())
+		using (_lock.EnterScope())
 		{
 			_keepRunning = false;
 			WaitUntil(() => !_thread?.IsAlive ?? true);
@@ -153,8 +156,11 @@ public sealed class Nes : Computer
 
 	public void Reset()
 	{
-		_cpu.Reset();
-		Ppu.Reset();
-		_tick = 0;
+		using (_lock.EnterScope())
+		{
+			_cpu.Reset();
+			Ppu.Reset();
+			_tick = 0;
+		}
 	}
 }
