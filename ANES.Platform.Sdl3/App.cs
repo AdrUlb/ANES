@@ -1,44 +1,68 @@
 using ANES.Emulation;
 using ANES.Rendering.Sdl3;
 using Sdl3Sharp;
+using System.Drawing;
 
 namespace ANES.Platform.Sdl3;
 
-internal sealed class App() : SdlApp(SdlInitFlags.Video)
+internal sealed class App
 {
-	private const int _scale = 3;
+	private const int _scale = 2;
 
 	private readonly Nes _nes = new();
 
-	private SdlWindow _window = null!;
-	private SdlRenderer _renderer = null!;
-	private AnesSdlRenderer _anesRenderer = null!;
+	private readonly SdlWindow _window;
+	private readonly SdlRenderer _renderer;
+	private readonly AnesSdlRenderer _anesRenderer;
 
-	protected override SdlAppResult Init()
+	private volatile bool _render = false;
+	private volatile bool _quit = false;
+
+	internal App()
 	{
+		var width = AnesSdlRenderer.ScreenWidth * _scale;
+		var height = AnesSdlRenderer.ScreenHeight * _scale;
 		(_window, _renderer) = SdlWindow.CreateWithRenderer(
 			"ANES",
-			AnesSdlRenderer.ScreenWidth * _scale,
-			AnesSdlRenderer.ScreenHeight * _scale,
+			width,
+			height,
 			SdlWindowFlags.Resizable
 		);
 		_anesRenderer = new(_nes, _renderer);
 
 		_nes.Start();
-		_nes.InsertCartridge(@"C:\Stuff\Roms\nes\smb1.nes");
+		_nes.InsertCartridge("/mnt/ssd_1tb/Roms/NES/smb1.nes");
 		_nes.Reset();
 
-		return SdlAppResult.Continue;
+		_nes.Ppu.Frame += OnFrameReady;
 	}
 
-	protected override SdlAppResult Iterate() => SdlAppResult.Continue;
+	private void OnFrameReady(object? sender, EventArgs e)
+	{
+		_render = true;
 
-	protected override SdlAppResult Event(SdlEvent sdlEvent)
+		while (_render && !_quit) { }
+	}
+
+	private void Render()
+	{
+		if (!_render)
+			return;
+
+		_renderer.SetDrawColor(Color.Black);
+		_renderer.Clear();
+		_anesRenderer.Render();
+		_render = false;
+		_renderer.Present();
+	}
+
+	private void HandleEvent(SdlEvent sdlEvent)
 	{
 		switch (sdlEvent.Type)
 		{
 			case SdlEventType.WindowCloseRequested:
-				return SdlAppResult.Success;
+				_quit = true;
+				break;
 			case SdlEventType.KeyDown:
 				switch (sdlEvent.Key.Scancode)
 				{
@@ -98,11 +122,18 @@ internal sealed class App() : SdlApp(SdlInitFlags.Video)
 				}
 				break;
 		}
-		return SdlAppResult.Continue;
 	}
 
-	protected override void Quit(SdlAppResult result)
+	public void Run()
 	{
+		while (!_quit)
+		{
+			Render();
+
+			while (Sdl.PollEvent(out var sdlEvent))
+				HandleEvent(sdlEvent);
+		}
+
 		_nes.Stop();
 		_anesRenderer.Dispose();
 		_renderer.Destroy();

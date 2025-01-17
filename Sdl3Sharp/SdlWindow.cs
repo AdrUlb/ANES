@@ -16,6 +16,9 @@ public sealed class SdlWindow
 
 	public static SdlWindow Create(string title, int width, int height, SdlWindowFlags flags = 0) => new(SDL_CreateWindow(title, width, height, flags));
 
+	public static SdlWindow CreatePopup(SdlWindow parent, int offsetX, int offsetY, int width, int height, SdlWindowFlags flags = 0) =>
+		new(SDL_CreatePopupWindow(parent.Handle, offsetX, offsetY, width, height, flags));
+
 	public static SdlWindow CreateWithProperties(SdlProperties props) => new(SDL_CreateWindowWithProperties(props.Id));
 
 	public static (SdlWindow window, SdlRenderer renderer) CreateWithRenderer(string title, int width, int height, SdlWindowFlags flags = 0)

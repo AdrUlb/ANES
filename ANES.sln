@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ANES.Platform.Sdl3", "ANES.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ANES.Rendering.Sdl3", "ANES.Rendering.Sdl3\ANES.Rendering.Sdl3.csproj", "{9B3D9178-846D-42B3-9DEA-AC21FECCE396}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Platforms", "Platforms", "{B4612788-4142-4B0D-9FB8-1EFA5BAB810C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,5 +47,9 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C9AB2F90-B59F-4E1C-A79F-671C6DCF9D42}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{972867BF-616D-48E5-977D-3F9E2D5BC3A3} = {B4612788-4142-4B0D-9FB8-1EFA5BAB810C}
+		{F9C7D1DC-4CA8-4F4A-9EF0-3BA82983371A} = {B4612788-4142-4B0D-9FB8-1EFA5BAB810C}
 	EndGlobalSection
 EndGlobal

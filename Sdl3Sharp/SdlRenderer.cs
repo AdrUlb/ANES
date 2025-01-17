@@ -33,6 +33,25 @@ public sealed class SdlRenderer
 	public void Clear() => SDL_RenderClear(Handle);
 	public void Present() => SDL_RenderPresent(Handle);
 
+	public unsafe void FillRect(RectangleF rectangle)
+	{
+		var sdlRect = SdlFRect.FromRectangleF(rectangle);
+		SDL_RenderFillRect(Handle, &sdlRect);
+	}
+
+	public unsafe void SetClipRect(Rectangle rectangle)
+	{
+		var sdlRect = SdlRect.FromRectangle(rectangle);
+		if (!SDL_SetRenderClipRect(Handle, &sdlRect))
+			throw new SdlErrorException();
+	}
+
+	public unsafe void SetClipRect()
+	{
+		if (!SDL_SetRenderClipRect(Handle, null))
+			throw new SdlErrorException();
+	}
+
 	public int GetVsync()
 	{
 		if (!SDL_GetRenderVSync(Handle, out var vsync))

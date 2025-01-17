@@ -54,7 +54,8 @@ internal sealed partial class SdlControl : Control
 
 			/*var props = SdlProperties.Create();
 			props.Set(SdlProperties.WindowCreateWin32Hwnd, Handle);
-			SdlWindow = SdlWindow.CreateWithProperties(props);*/
+			SdlWindow = SdlWindow.CreateWithProperties(props);
+			props.Destroy()*/
 		}
 	}
 

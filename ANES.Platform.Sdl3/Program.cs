@@ -1,15 +1,21 @@
 ﻿using ANES.Rendering.Sdl3;
+using Sdl3Sharp;
+using System.Diagnostics;
 
 namespace ANES.Platform.Sdl3;
 
 internal static class Program
 {
-	public static int Main()
+	public static void Main()
 	{
+		if (OperatingSystem.IsWindows())
+			Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
+
 #if !PUBLISH
 		AnesSdlRenderer.SetRuntimeImportResolver();
 #endif
 
-		return new App().Run();
+		Sdl.Init(SdlInitFlags.Video);
+		new App().Run();
 	}
 }

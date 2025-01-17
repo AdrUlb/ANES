@@ -25,8 +25,16 @@ internal static partial class Imports
 	[LibraryImport(_libraryName, StringMarshalling = StringMarshalling.Utf8)]
 	internal static partial string SDL_GetError();
 
+	[LibraryImport(_libraryName)]
+	[return: MarshalAs(UnmanagedType.U1)]
+	internal static partial bool SDL_PollEvent(out SdlEvent sdlEvent);
+
 	[LibraryImport(_libraryName, StringMarshalling = StringMarshalling.Utf8)]
 	internal static partial nint SDL_CreateWindow(string title, int w, int h, SdlWindowFlags flags);
+
+
+	[LibraryImport(_libraryName, StringMarshalling = StringMarshalling.Utf8)]
+	internal static partial nint SDL_CreatePopupWindow(nint parent, int offsetX, int offsetY, int w, int h, SdlWindowFlags flags);
 
 	[LibraryImport(_libraryName)]
 	internal static partial nint SDL_CreateWindowWithProperties(SDL_PropertiesID props);
@@ -57,7 +65,7 @@ internal static partial class Imports
 	[LibraryImport(_libraryName)]
 	[return: MarshalAs(UnmanagedType.U1)]
 	internal static partial bool SDL_GetRenderVSync(nint renderer, out int vsync);
-	
+
 	[LibraryImport(_libraryName)]
 	[return: MarshalAs(UnmanagedType.U1)]
 	internal static partial bool SDL_SetRenderDrawColor(nint renderer, byte r, byte g, byte b, byte a);
@@ -69,6 +77,22 @@ internal static partial class Imports
 	[LibraryImport(_libraryName)]
 	[return: MarshalAs(UnmanagedType.U1)]
 	internal static partial bool SDL_RenderPresent(nint renderer);
+
+	[LibraryImport(_libraryName)]
+	[return: MarshalAs(UnmanagedType.U1)]
+	internal static unsafe partial bool SDL_RenderFillRect(nint renderer, SdlFRect* rect);
+
+	[LibraryImport(_libraryName)]
+	[return: MarshalAs(UnmanagedType.U1)]
+	internal static unsafe partial bool SDL_SetRenderClipRect(nint renderer, SdlRect* rect);
+
+	[LibraryImport(_libraryName)]
+	[return: MarshalAs(UnmanagedType.U1)]
+	internal static partial bool SDL_GetRenderClipRect(nint renderer, out SdlRect rect);
+
+	[LibraryImport(_libraryName)]
+	[return: MarshalAs(UnmanagedType.U1)]
+	internal static partial bool SDL_RenderClipEnabled(nint renderer);
 
 	[LibraryImport(_libraryName)]
 	internal static partial SDL_PropertiesID SDL_CreateProperties();
@@ -85,7 +109,7 @@ internal static partial class Imports
 	internal static partial bool SDL_SetPointerProperty(SDL_PropertiesID props, string name, nint value);
 
 	[LibraryImport(_libraryName, StringMarshalling = StringMarshalling.Utf8)]
-	internal static partial nint SDL_GetPointerProperty(SDL_PropertiesID props, string name, nint default_value);
+	internal static partial nint SDL_GetPointerProperty(SDL_PropertiesID props, string name, nint defaultValue);
 
 	[LibraryImport(_libraryName)]
 	internal static partial nint SDL_CreateTextureWithProperties(nint renderer, SDL_PropertiesID props);

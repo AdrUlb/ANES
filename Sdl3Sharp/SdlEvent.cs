@@ -38,6 +38,6 @@ public struct SdlKeyboardEvent
 	public SdlKeycode Key; // SDL virtual key code
 	public SdlKeymod Mod; // current key modifiers
 	public ushort Raw; // The platform dependent scancode for this event
-	[MarshalAs(UnmanagedType.U1)] public bool Down; // true if the key is pressed
-	[MarshalAs(UnmanagedType.U1)] public bool Repeat; // true if this is a key repeat
+	[MarshalAs(UnmanagedType.U1)] public byte Down; // true if the key is pressed
+	[MarshalAs(UnmanagedType.U1)] public byte Repeat; // true if this is a key repeat
 }

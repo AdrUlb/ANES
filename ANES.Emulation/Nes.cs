@@ -48,8 +48,8 @@ public sealed class Nes : Computer
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static unsafe void WaitUntil(Func<bool> condition)
 	{
-		//while (!condition()) { }
-		SpinWait.SpinUntil(condition);
+		while (!condition()) { }
+		//SpinWait.SpinUntil(condition);
 	}
 
 	private void PpuNmiHandler(object? sender, EventArgs e)
@@ -83,7 +83,6 @@ public sealed class Nes : Computer
 
 	private void ThreadProc()
 	{
-		Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
 		Thread.CurrentThread.Priority = ThreadPriority.Highest;
 
 		double nextFrameStart = Stopwatch.GetTimestamp();

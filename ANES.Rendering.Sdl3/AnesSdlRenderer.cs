@@ -25,13 +25,6 @@ public sealed class AnesSdlRenderer : IDisposable
 		_renderer = renderer;
 
 		_screen = new(Ppu.PictureWidth, Ppu.PictureHeight, _renderer);
-
-		_nes.Ppu.Frame += OnFrameReady;
-	}
-
-	private void OnFrameReady(object? sender, EventArgs e)
-	{
-		Render();
 	}
 
 	public void Render()
@@ -51,13 +44,10 @@ public sealed class AnesSdlRenderer : IDisposable
 
 		var srcRect = new RectangleF(0, _screenOffsetTop, ScreenWidth, ScreenHeight);
 
-		_renderer.SetDrawColor(Color.Black);
-		_renderer.Clear();
 		_screen.Render(srcRect, RectangleF.Empty);
-		_renderer.Present();
 	}
 
-	public static void SetRuntimeImportResolver() => NativeLibrary.SetDllImportResolver(typeof(SdlApp).Assembly, SdlImportResolver);
+	public static void SetRuntimeImportResolver() => NativeLibrary.SetDllImportResolver(typeof(Sdl).Assembly, SdlImportResolver);
 
 	private static nint SdlImportResolver(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
 	{
@@ -85,8 +75,6 @@ public sealed class AnesSdlRenderer : IDisposable
 
 	public void Dispose()
 	{
-		_nes.Ppu.Frame -= OnFrameReady;
-
 		_disposed = true;
 		_screen.Dispose();
 	}

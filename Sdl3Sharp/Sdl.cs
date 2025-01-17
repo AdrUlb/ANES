@@ -13,4 +13,6 @@ public static class Sdl
 		if (!SDL_Init(flags))
 			throw new SdlErrorException();
 	}
+
+	public static bool PollEvent(out SdlEvent sdlEvent) => SDL_PollEvent(out sdlEvent);
 }

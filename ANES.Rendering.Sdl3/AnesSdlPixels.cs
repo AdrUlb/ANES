@@ -9,14 +9,15 @@ public sealed class AnesSdlPixels : IDisposable
 	private readonly Lock _lock = new();
 	private SdlSurface? _surface = null;
 
-	public AnesSdlPixels(int width, int height, SdlRenderer _renderer)
+	public AnesSdlPixels(int width, int height, SdlRenderer renderer)
 	{
 		var props = SdlProperties.Create();
 		props.Set(SdlProperties.TextureCreateWidth, width);
 		props.Set(SdlProperties.TextureCreateHeight, height);
 		props.Set(SdlProperties.TextureCreateAccess, (long)SdlTextureAccess.Streaming);
 		props.Set(SdlProperties.TextureCreateFormat, (long)SdlPixelFormat.Argb8888);
-		_texture = SdlTexture.CreateWithProperties(_renderer, props);
+		_texture = SdlTexture.CreateWithProperties(renderer, props);
+		props.Destroy();
 		_texture.SetScaleMode(SdlScaleMode.Nearest);
 	}
 
