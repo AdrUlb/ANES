@@ -17,7 +17,8 @@ internal sealed class PatternTablesWindow : Form
 	private readonly PixelRenderer _patternRenderer0 = new(16 * 8, 16 * 8);
 	private readonly PixelRenderer _patternRenderer1 = new(16 * 8, 16 * 8);
 
-	private volatile bool _quit = false;
+	[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+	public bool Quit { get; private set; } = false;
 
 	private readonly Lock _lock = new();
 
@@ -159,17 +160,17 @@ internal sealed class PatternTablesWindow : Form
 
 	internal void Render()
 	{
-		if (_quit)
+		if (Quit)
 			return;
 
 		CopyPatternTable(_patternRenderer0, 0);
 		CopyPatternTable(_patternRenderer1, 1);
 
 		_patternRenderer0.Invalidate();
-		_patternRenderer0.Update();
+		Invoke(_patternRenderer0.Update);
 
 		_patternRenderer1.Invalidate();
-		_patternRenderer1.Update();
+		Invoke(_patternRenderer1.Update);
 	}
 
 	protected override void OnSizeChanged(EventArgs e)
@@ -189,9 +190,9 @@ internal sealed class PatternTablesWindow : Form
 
 	protected override void OnFormClosing(FormClosingEventArgs e)
 	{
-		_quit = true;
+		Quit = true;
 		Hide();
+		e.Cancel = true;
 		base.OnFormClosing(e);
 	}
-
 }

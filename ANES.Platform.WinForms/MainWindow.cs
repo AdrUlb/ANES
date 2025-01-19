@@ -7,10 +7,12 @@ namespace ANES.Platform.WinForms;
 [DesignerCategory("")]
 internal sealed class MainWindow : Form
 {
+	private bool _quit = false;
 	private readonly Nes _nes = new();
 
 	private PixelRenderer _pixelRenderer = new(256, 240);
 	private PatternTablesWindow? _patternTablesWindow = null;
+	private readonly Lock _patternTablesWindowLock = new();
 
 	public MainWindow()
 	{
@@ -143,14 +145,15 @@ internal sealed class MainWindow : Form
 	private void OnFrameReady(object? sender, EventArgs e)
 	{
 		Render();
-		_patternTablesWindow?.Render();
+		using (_patternTablesWindowLock.EnterScope())
+			_patternTablesWindow?.Render();
 	}
 
 	private void Render()
 	{
 		_pixelRenderer.CopyPixels(_nes.Ppu.Picture);
 		_pixelRenderer.Invalidate();
-		_pixelRenderer.Update();
+		Invoke(_pixelRenderer.Update);
 	}
 
 	protected override void OnKeyDown(KeyEventArgs e)
@@ -217,9 +220,16 @@ internal sealed class MainWindow : Form
 
 	protected override void OnFormClosing(FormClosingEventArgs e)
 	{
-		_nes.Stop();
+		_quit = true;
 		Hide();
+		e.Cancel = true;
 		base.OnFormClosing(e);
+
+		new Thread(() =>
+		{
+			_nes.StopAndWait();
+			Invoke(Dispose);
+		}).Start();
 	}
 
 	private void LoadRomDialog()
@@ -242,18 +252,21 @@ internal sealed class MainWindow : Form
 
 	private void ShowPatternTable()
 	{
-		if (_patternTablesWindow != null && !_patternTablesWindow.IsDisposed)
+		using (_patternTablesWindowLock.EnterScope())
 		{
-			_patternTablesWindow.Focus();
-			return;
+			if (_patternTablesWindow != null)
+			{
+				if (!_patternTablesWindow.Quit)
+				{
+					_patternTablesWindow.Focus();
+					return;
+				}
+
+				_patternTablesWindow.Dispose();
+			}
+
+			_patternTablesWindow = new PatternTablesWindow(_nes);
+			_patternTablesWindow.Show();
 		}
-
-		_patternTablesWindow = new PatternTablesWindow(_nes);
-		_patternTablesWindow.Show();
-	}
-
-	protected override void Dispose(bool disposing)
-	{
-		base.Dispose(disposing);
 	}
 }

@@ -9,6 +9,7 @@ internal class PixelRenderer : Control
 	private readonly int[] _data;
 	private readonly GCHandle _dataHandle;
 	private readonly Bitmap _bitmap;
+	private readonly Lock _lock = new();
 
 	public PixelRenderer(int width, int height)
 	{
@@ -25,13 +26,15 @@ internal class PixelRenderer : Control
 
 	public void SetPixel(int x, int y, Color color)
 	{
-		_data[x + (y * _bitmap.Width)] = color.ToArgb();
+		using (_lock.EnterScope())
+			_data[x + (y * _bitmap.Width)] = color.ToArgb();
 	}
 
 	public void CopyPixels(ReadOnlySpan<Color> pixels)
 	{
-		for (var i = 0; i < pixels.Length; i++)
-			_data[i] = pixels[i].ToArgb();
+		using (_lock.EnterScope())
+			for (var i = 0; i < pixels.Length; i++)
+				_data[i] = pixels[i].ToArgb();
 	}
 
 
@@ -48,8 +51,9 @@ internal class PixelRenderer : Control
 		e.Graphics.CompositingQuality = CompositingQuality.HighSpeed;
 
 		e.Graphics.PixelOffsetMode = PixelOffsetMode.HighSpeed;
-		
-		e.Graphics.DrawImage(_bitmap, 0, 0, Width, Height);
+
+		using (_lock.EnterScope())
+			e.Graphics.DrawImage(_bitmap, 0, 0, Width, Height);
 	}
 
 	protected override void Dispose(bool disposing)
