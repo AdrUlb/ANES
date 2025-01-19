@@ -1,9 +1,6 @@
 ﻿using ANES.Emulation;
 using ANES.Platform.WinForms.Controls;
-using ANES.Rendering.Sdl3;
-using Sdl3Sharp;
 using System.ComponentModel;
-using System.Diagnostics;
 
 namespace ANES.Platform.WinForms;
 
@@ -15,14 +12,10 @@ internal sealed class PatternTablesWindow : Form
 	private readonly Nes _nes;
 
 	private MyMenuStrip _mainMenu;
-	private SdlControl _patternSdl0 = new();
-	private SdlControl _patternSdl1 = new();
 	private GroupBox _patternGroup0 = new();
 	private GroupBox _patternGroup1 = new();
-	private SdlRenderer _patternRenderer0 = null!;
-	private SdlRenderer _patternRenderer1 = null!;
-	private AnesSdlPixels _patternPixels0 = null!;
-	private AnesSdlPixels _patternPixels1 = null!;
+	private readonly PixelRenderer _patternRenderer0 = new(16 * 8, 16 * 8);
+	private readonly PixelRenderer _patternRenderer1 = new(16 * 8, 16 * 8);
 
 	private volatile bool _quit = false;
 
@@ -39,24 +32,24 @@ internal sealed class PatternTablesWindow : Form
 		MinimizeBox = false;
 		ShowInTaskbar = false;
 
-		_patternSdl0.Dock = DockStyle.Fill;
-		_patternSdl0.Size = new Size(131, 125);
+		_patternRenderer0.Dock = DockStyle.Fill;
+		_patternRenderer0.Size = new Size(131, 125);
 
 		_patternGroup0.SuspendLayout();
 		_patternGroup0.Padding = new Padding(12);
 		_patternGroup0.Size = new Size(155, 165);
 		_patternGroup0.Text = "Pattern Table 0x0000";
-		_patternGroup0.Controls.Add(_patternSdl0);
+		_patternGroup0.Controls.Add(_patternRenderer0);
 		_patternGroup0.ResumeLayout(false);
 
-		_patternSdl1.Dock = DockStyle.Fill;
-		_patternSdl1.Size = new Size(137, 126);
+		_patternRenderer1.Dock = DockStyle.Fill;
+		_patternRenderer1.Size = new Size(131, 125);
 
 		_patternGroup1.SuspendLayout();
 		_patternGroup1.Padding = new Padding(12);
 		_patternGroup1.Size = new Size(161, 166);
 		_patternGroup1.Text = "Pattern Table 0x1000";
-		_patternGroup1.Controls.Add(_patternSdl1);
+		_patternGroup1.Controls.Add(_patternRenderer1);
 		_patternGroup1.ResumeLayout(false);
 
 		_mainMenu = CreateMainMenu();
@@ -126,15 +119,16 @@ internal sealed class PatternTablesWindow : Form
 		var tableHeight = 16 * 8 * scale;
 		var tableSize = new Size(tableWidth, tableHeight);
 
-		_patternGroup0.Size += tableSize - _patternSdl0.Size;
-		_patternGroup1.Size += tableSize - _patternSdl1.Size;
+		_patternGroup0.Size += tableSize - _patternRenderer0.Size;
+		_patternGroup1.Size += tableSize - _patternRenderer1.Size;
+
 
 		_patternGroup0.Location = new(_padding, _mainMenu.Height + _padding);
 		_patternGroup1.Location = new(_patternGroup0.Right + _padding, _mainMenu.Height + _padding);
 		ClientSize = new((_patternGroup0.Width * 2) + (_padding * 3), _patternGroup0.Height + (_padding * 2) + _mainMenu.Height);
 	}
 
-	private void CopyPatternTable(AnesSdlPixels texture, int half)
+	private void CopyPatternTable(PixelRenderer renderer, int half)
 	{
 		for (var tileY = 0; tileY < 16; tileY++)
 		{
@@ -156,9 +150,7 @@ internal sealed class PatternTablesWindow : Form
 
 						var color = Color.FromArgb(255 * pattern / 3, 255 * pattern / 3, 255 * pattern / 3);
 
-						var row = texture.GetRowSpan<int>(tileY * 8 + y);
-						var pixel = (tileX * 8 + x);
-						row[pixel] = color.ToArgb();
+						renderer.SetPixel((tileX * 8) + x, (tileY * 8) + y, color);
 					}
 				}
 			}
@@ -167,36 +159,17 @@ internal sealed class PatternTablesWindow : Form
 
 	internal void Render()
 	{
-		using (_lock.EnterScope())
-		{
-			if (_quit)
-				return;
+		if (_quit)
+			return;
 
-			if (_patternPixels0 == null || _patternPixels1 == null)
-				return;
+		CopyPatternTable(_patternRenderer0, 0);
+		CopyPatternTable(_patternRenderer1, 1);
 
-			CopyPatternTable(_patternPixels0, 0);
-			CopyPatternTable(_patternPixels1, 1);
+		_patternRenderer0.Invalidate();
+		_patternRenderer0.Update();
 
-			_patternRenderer0.SetDrawColor(Color.Black);
-			_patternRenderer0.Clear();
-			_patternPixels0.Render();
-			_patternRenderer0.Present();
-
-			_patternRenderer1.SetDrawColor(Color.Black);
-			_patternRenderer1.Clear();
-			_patternPixels1.Render();
-			_patternRenderer1.Present();
-		}
-	}
-
-	protected override void OnLoad(EventArgs e)
-	{
-		_patternRenderer0 = SdlRenderer.Create(_patternSdl0.SdlWindow ?? throw new UnreachableException());
-		_patternRenderer1 = SdlRenderer.Create(_patternSdl1.SdlWindow ?? throw new UnreachableException());
-
-		_patternPixels0 = new(16 * 8, 16 * 8, _patternRenderer0);
-		_patternPixels1 = new(16 * 8, 16 * 8, _patternRenderer1);
+		_patternRenderer1.Invalidate();
+		_patternRenderer1.Update();
 	}
 
 	protected override void OnSizeChanged(EventArgs e)
@@ -206,7 +179,6 @@ internal sealed class PatternTablesWindow : Form
 		var groupWidth = (ClientSize.Width - (_padding * 3)) / 2;
 		var groupHeight = ClientSize.Height - _mainMenu.Height - (2 * _padding);
 		var groupSize = new Size(groupWidth, groupHeight);
-		Console.WriteLine(groupSize);
 
 		_patternGroup0.Size = groupSize;
 		_patternGroup1.Size = groupSize;
@@ -217,17 +189,9 @@ internal sealed class PatternTablesWindow : Form
 
 	protected override void OnFormClosing(FormClosingEventArgs e)
 	{
-		using (_lock.EnterScope())
-		{
-			Hide();
-			_quit = true;
-
-			_patternPixels0.Dispose();
-			_patternPixels1.Dispose();
-			_patternRenderer0.Destroy();
-			_patternRenderer1.Destroy();
-			base.OnFormClosing(e);
-		}
+		_quit = true;
+		Hide();
+		base.OnFormClosing(e);
 	}
 
 }

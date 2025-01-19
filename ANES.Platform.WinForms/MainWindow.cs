@@ -1,9 +1,6 @@
 using ANES.Emulation;
 using ANES.Platform.WinForms.Controls;
-using ANES.Rendering.Sdl3;
-using Sdl3Sharp;
 using System.ComponentModel;
-using System.Diagnostics;
 
 namespace ANES.Platform.WinForms;
 
@@ -12,31 +9,29 @@ internal sealed class MainWindow : Form
 {
 	private readonly Nes _nes = new();
 
-	private SdlControl _sdlControl = new();
-	private SdlRenderer _sdlRenderer = null!;
-	private AnesSdlRenderer? _anesRenderer;
+	private PixelRenderer _pixelRenderer = new(256, 240);
 	private PatternTablesWindow? _patternTablesWindow = null;
 
 	public MainWindow()
 	{
 		_nes.Ppu.Frame += OnFrameReady;
 
-		AnesSdlRenderer.SetRuntimeImportResolver();
-		SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
-
 		SuspendLayout();
 
-		_sdlControl.Dock = DockStyle.Fill;
+		_pixelRenderer.Dock = DockStyle.Fill;
 
 		Text = "ANES";
 
 		var mainMenu = CreateMainMenu();
 
-		Controls.AddRange(_sdlControl, mainMenu);
+		Controls.AddRange(_pixelRenderer, mainMenu);
 
 		MainMenuStrip = mainMenu;
 
 		ResumeLayout();
+
+		SetScale(2);
+		_nes.Start();
 	}
 
 	private MyMenuStrip CreateMainMenu()
@@ -130,8 +125,8 @@ internal sealed class MainWindow : Form
 	{
 		// Limit the scale to the maximum size of the working area
 		var workingArea = Screen.FromControl(this).WorkingArea;
-		var maxScaleX = workingArea.Width / AnesSdlRenderer.ScreenWidth;
-		var maxScaleY = workingArea.Height / AnesSdlRenderer.ScreenHeight;
+		var maxScaleX = workingArea.Width / Ppu.PictureWidth;
+		var maxScaleY = workingArea.Height / Ppu.PictureHeight;
 		var maxScale = Math.Min(maxScaleX, maxScaleY);
 
 		if (scale > maxScale)
@@ -140,26 +135,22 @@ internal sealed class MainWindow : Form
 		scale = Math.Min(scale, maxScale);
 
 		// Adjust the window size to fit the NES screen
-		var newWidth = (AnesSdlRenderer.ScreenWidth * scale) - _sdlControl.Width + ClientSize.Width;
-		var newHeight = (AnesSdlRenderer.ScreenHeight * scale) - _sdlControl.Height + ClientSize.Height;
+		var newWidth = (Ppu.PictureWidth * scale) - _pixelRenderer.Width + ClientSize.Width;
+		var newHeight = (Ppu.PictureHeight * scale) - _pixelRenderer.Height + ClientSize.Height;
 		ClientSize = new Size(newWidth, newHeight);
 	}
 
 	private void OnFrameReady(object? sender, EventArgs e)
 	{
+		Render();
 		_patternTablesWindow?.Render();
 	}
 
-	protected override void OnLoad(EventArgs e)
+	private void Render()
 	{
-		SetScale(2);
-
-		if (_sdlControl.SdlWindow == null)
-			throw new UnreachableException();
-
-		_sdlRenderer = SdlRenderer.Create(_sdlControl.SdlWindow);
-		_anesRenderer = new(_nes, _sdlRenderer);
-		_nes.Start();
+		_pixelRenderer.CopyPixels(_nes.Ppu.Picture);
+		_pixelRenderer.Invalidate();
+		_pixelRenderer.Update();
 	}
 
 	protected override void OnKeyDown(KeyEventArgs e)
@@ -224,22 +215,10 @@ internal sealed class MainWindow : Form
 		}
 	}
 
-	protected override void OnResize(EventArgs e)
-	{
-		if (_anesRenderer != null)
-			_anesRenderer.PauseRendering = WindowState == FormWindowState.Minimized;
-
-		base.OnResize(e);
-	}
-
 	protected override void OnFormClosing(FormClosingEventArgs e)
 	{
-		Hide();
-
 		_nes.Stop();
-		_anesRenderer?.Dispose();
-		_sdlRenderer.Destroy();
-
+		Hide();
 		base.OnFormClosing(e);
 	}
 
@@ -271,5 +250,10 @@ internal sealed class MainWindow : Form
 
 		_patternTablesWindow = new PatternTablesWindow(_nes);
 		_patternTablesWindow.Show();
+	}
+
+	protected override void Dispose(bool disposing)
+	{
+		base.Dispose(disposing);
 	}
 }

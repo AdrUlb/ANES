@@ -12,7 +12,6 @@ public sealed class Nes : Computer
 	private const double _ppuTicksPerFrame = _ppuTicksPerSecond / _framesPerSecond;
 
 	private Thread? _thread;
-	private readonly Lock _lock = new();
 	private bool _keepRunning = false;
 
 	public readonly byte[] Palette = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Composite_wiki.pal"));
@@ -91,11 +90,8 @@ public sealed class Nes : Computer
 		{
 			nextFrameStart += Stopwatch.Frequency / _framesPerSecond;
 
-			using (_lock.EnterScope())
-			{
-				while (!_frameDone)
-					Tick();
-			}
+			while (!_frameDone)
+				Tick();
 
 			var swTicksToSpare = nextFrameStart - Stopwatch.GetTimestamp();
 			var millisecondsToSpare = swTicksToSpare * 1000.0 / Stopwatch.Frequency;
@@ -133,12 +129,9 @@ public sealed class Nes : Computer
 	/// </summary>
 	public void Start()
 	{
-		using (_lock.EnterScope())
-		{
-			_thread = new(ThreadProc);
-			_keepRunning = true;
-			_thread.Start();
-		}
+		_thread = new(ThreadProc);
+		_keepRunning = true;
+		_thread.Start();
 	}
 
 	/// <summary>
@@ -146,20 +139,18 @@ public sealed class Nes : Computer
 	/// </summary>
 	public void Stop()
 	{
-		using (_lock.EnterScope())
-		{
-			_keepRunning = false;
-			WaitUntil(() => !_thread?.IsAlive ?? true);
-		}
+		_keepRunning = false;
+	}
+	public void StopAndWait()
+	{
+		Stop();
+		WaitUntil(() => !_thread?.IsAlive ?? true);
 	}
 
 	public void Reset()
 	{
-		using (_lock.EnterScope())
-		{
-			_cpu.Reset();
-			Ppu.Reset();
-			_tick = 0;
-		}
+		_cpu.Reset();
+		Ppu.Reset();
+		_tick = 0;
 	}
 }

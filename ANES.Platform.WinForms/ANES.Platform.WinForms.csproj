@@ -16,19 +16,6 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 
-	<ItemGroup>
-		<Content Include="..\NativeLibs\win-x64\SDL3-3.1.8\SDL3.dll">
-			<Link>runtimes/win-x64/native/SDL3.dll</Link>
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-			<CopyToPublishDirectory>Never</CopyToPublishDirectory>
-		</Content>
-		<Content Include="..\NativeLibs\win-x64\SDL3-3.1.8\SDL3.dll" Condition="'$(RuntimeIdentifier)|$(IsPublishing)'=='win-x64|true'">
-			<Link>SDL3.dll</Link>
-			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
-			<CopyToPublishDirectory>Always</CopyToPublishDirectory>
-		</Content>
-	</ItemGroup>
-
 	<PropertyGroup Condition="$(IsPublishing)">
 		<_SuppressWinFormsTrimError>true</_SuppressWinFormsTrimError>
 		<PublishAot>true</PublishAot>
@@ -45,26 +32,17 @@
 
 		<!-- Generate direct PInvoke calls for everything in libc (also matches libc.so on Linux or libc.dylib on macOS) -->
 		<DirectPInvoke Include="libc" Visible="false" />
-		<!--  Link SDL3 statically -->
-		<DirectPInvoke Include="SDL3" Visible="false" />
-		<NativeLibrary Include="..\NativeLibs\linux-x64\libSDL3.a" Condition="'$(RuntimeIdentifier)'=='linux-x64'" Visible="false" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(IsPublishing)|$(RuntimeIdentifier)'=='true|win-x64'">
-		<NativeLibrary Include="..\NativeLibs\win-x64\SDL3-3.1.8\SDL3.lib" Visible="false" />
-		<NativeLibrary Include="gdi32.lib" Visible="false" />
-		<NativeLibrary Include="imm32.lib" Visible="false" />
-		<NativeLibrary Include="setupapi.lib" Visible="false" />
-		<NativeLibrary Include="shell32.lib" Visible="false" />
-		<NativeLibrary Include="winmm.lib" Visible="false" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\ANES.Rendering.Sdl3\ANES.Rendering.Sdl3.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="WinFormsComInterop" Version="0.5.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\ANES.Emulation\ANES.Emulation.csproj" />
 	</ItemGroup>
 
 </Project>
