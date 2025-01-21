@@ -7,7 +7,6 @@ namespace ANES.Platform.WinForms;
 [DesignerCategory("")]
 internal sealed class MainWindow : Form
 {
-	private bool _quit = false;
 	private readonly Nes _nes = new();
 
 	private PixelRenderer _pixelRenderer = new(256, 240);
@@ -33,7 +32,6 @@ internal sealed class MainWindow : Form
 		ResumeLayout();
 
 		SetScale(2);
-		_nes.Start();
 	}
 
 	private MyMenuStrip CreateMainMenu()
@@ -153,7 +151,6 @@ internal sealed class MainWindow : Form
 	{
 		_pixelRenderer.CopyPixels(_nes.Ppu.Picture);
 		_pixelRenderer.Invalidate();
-		Invoke(_pixelRenderer.Update);
 	}
 
 	protected override void OnKeyDown(KeyEventArgs e)
@@ -220,14 +217,13 @@ internal sealed class MainWindow : Form
 
 	protected override void OnFormClosing(FormClosingEventArgs e)
 	{
-		_quit = true;
 		Hide();
 		e.Cancel = true;
 		base.OnFormClosing(e);
 
 		new Thread(() =>
 		{
-			_nes.StopAndWait();
+			_nes.Stop();
 			Invoke(Dispose);
 		}).Start();
 	}
@@ -246,8 +242,10 @@ internal sealed class MainWindow : Form
 			return;
 
 		var romFile = dialog.FileName;
-		_nes.InsertCartridge(romFile);
+		_nes.Stop();
 		_nes.Reset();
+		_nes.InsertCartridge(romFile);
+		_nes.Start();
 	}
 
 	private void ShowPatternTable()

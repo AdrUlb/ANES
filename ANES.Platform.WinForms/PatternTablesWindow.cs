@@ -167,10 +167,7 @@ internal sealed class PatternTablesWindow : Form
 		CopyPatternTable(_patternRenderer1, 1);
 
 		_patternRenderer0.Invalidate();
-		Invoke(_patternRenderer0.Update);
-
 		_patternRenderer1.Invalidate();
-		Invoke(_patternRenderer1.Update);
 	}
 
 	protected override void OnSizeChanged(EventArgs e)

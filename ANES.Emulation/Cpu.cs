@@ -471,16 +471,14 @@ internal sealed class Cpu(Computer computer)
 			/*if (_traceCycles >= 10000)
 				Console.WriteLine(GenerateTraceLine());*/
 
-			FetchNextOperation();
 
 			if (_signalInterruptReset || _signalInterruptNmi || _signalInterruptIrq)
 			{
-				// Undo PC increment from instruction fetch only if instruction was not BRK, an interrupt may "cancel" BRK but of course not any other instruction
-				if (_op.Instruction != CpuInstruction.Brk)
-					RegPc--;
 				_op = _operationsByOpcode[0]; // Force BRK into the internal instruction register
 				_servicingInterrupt = true; // Set a flag indicating that the "B flag" is not to be set
 			}
+			else
+				FetchNextOperation();
 
 			_opCycle = 1;
 

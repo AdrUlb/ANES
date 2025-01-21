@@ -82,8 +82,6 @@ public sealed class Nes : Computer
 
 	private void ThreadProc()
 	{
-		Thread.CurrentThread.Priority = ThreadPriority.Highest;
-
 		double nextFrameStart = Stopwatch.GetTimestamp();
 
 		while (_keepRunning)
@@ -96,7 +94,7 @@ public sealed class Nes : Computer
 			var swTicksToSpare = nextFrameStart - Stopwatch.GetTimestamp();
 			var millisecondsToSpare = swTicksToSpare * 1000.0 / Stopwatch.Frequency;
 			var millisecondsTaken = _millisPerFrame - millisecondsToSpare;
-			//Console.WriteLine($"Emulated frame took {millisecondsTaken:0.00}ms ({millisecondsToSpare:0.00}ms to spare)");
+			Console.WriteLine($"Emulated frame took {millisecondsTaken:0.00}ms ({millisecondsToSpare:0.00}ms to spare)");
 
 			WaitUntil(NextFrame);
 			_frameDone = false;
@@ -140,10 +138,6 @@ public sealed class Nes : Computer
 	public void Stop()
 	{
 		_keepRunning = false;
-	}
-	public void StopAndWait()
-	{
-		Stop();
 		WaitUntil(() => !_thread?.IsAlive ?? true);
 	}
 

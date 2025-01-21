@@ -30,9 +30,9 @@ internal sealed class App
 		);
 		_anesRenderer = new(_nes, _renderer);
 
-		_nes.Start();
 		_nes.InsertCartridge("/mnt/ssd_1tb/Roms/NES/smb1.nes");
 		_nes.Reset();
+		_nes.Start();
 
 		_nes.Ppu.Frame += OnFrameReady;
 	}
