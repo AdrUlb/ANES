@@ -50,10 +50,10 @@ internal class PixelRenderer : Control
 		e.Graphics.CompositingMode = CompositingMode.SourceCopy;
 		e.Graphics.CompositingQuality = CompositingQuality.HighSpeed;
 
-		e.Graphics.PixelOffsetMode = PixelOffsetMode.HighSpeed;
+		e.Graphics.PixelOffsetMode = PixelOffsetMode.Half;
 
 		using (_lock.EnterScope())
-			e.Graphics.DrawImage(_bitmap, 0, 0, Width, Height);
+			e.Graphics.DrawImage(_bitmap, 0, 0, ClientSize.Width, ClientSize.Height);
 	}
 
 	protected override void Dispose(bool disposing)
