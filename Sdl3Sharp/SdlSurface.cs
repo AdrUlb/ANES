@@ -1,7 +1,7 @@
 using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using static Sdl3Sharp.Internal.Imports;
+using static Sdl3Sharp.Imports;
 
 namespace Sdl3Sharp;
 
@@ -19,14 +19,14 @@ public struct SdlSurfaceData
 	private nint _reserved; // Reserved for internal use
 }
 
-public sealed class SdlSurface
+public sealed class SdlSurface : IDisposable
 {
-	internal readonly nint Handle;
+	private readonly SdlSurfacePtr _handle;
 
 	private unsafe SdlSurfaceData* Data
 	{
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		get => (SdlSurfaceData*)Handle;
+		get => _handle;
 	}
 
 	public unsafe int Width => Data->W;
@@ -37,31 +37,43 @@ public sealed class SdlSurface
 
 	public unsafe SdlPixelFormat Format => Data->Format;
 
-	internal unsafe SdlSurface(nint handle)
+	internal unsafe SdlSurface(SdlSurfacePtr handle)
 	{
-		if (handle == 0)
-			throw new SdlErrorException();
+		SdlErrorException.ThrowIf(handle == SdlSurfacePtr.Null);
 
-		Handle = handle;
+		_handle = handle;
 	}
+
+	public SdlSurface(int width, int height, SdlPixelFormat format) : this(SDL_CreateSurface(width, height, format)) { }
 
 	public unsafe Span<T> GetPixelsRowSpan<T>(int row) where T : unmanaged => new(Data->Pixels + (row * Pitch), Pitch / sizeof(T));
 
 	public unsafe void Blit(Rectangle sourceRect, SdlSurface target, Rectangle targetRect)
 	{
-
 		var srcrect = SdlRect.FromRectangle(sourceRect);
 		var dstrect = SdlRect.FromRectangle(targetRect);
 
 		var srcrectPtr = sourceRect != Rectangle.Empty ? &srcrect : null;
 		var dstrectPtr = targetRect != Rectangle.Empty ? &dstrect : null;
 
-		if (!SDL_BlitSurface(Handle, srcrectPtr, target.Handle, dstrectPtr))
-			throw new SdlErrorException();
+		SdlErrorException.ThrowIf(!SDL_BlitSurface(_handle, srcrectPtr, target._handle, dstrectPtr));
 	}
 
 	public void Blit(SdlSurface target) => Blit(Rectangle.Empty, target, Rectangle.Empty);
 
-	public static SdlSurface Create(int width, int height, SdlPixelFormat format) => new(SDL_CreateSurface(width, height, format));
-	public void Destroy() => SDL_DestroySurface(Handle);
+	private void ReleaseUnmanagedResources()
+	{
+		SDL_DestroySurface(_handle);
+	}
+
+	public void Dispose()
+	{
+		ReleaseUnmanagedResources();
+		GC.SuppressFinalize(this);
+	}
+
+	~SdlSurface()
+	{
+		ReleaseUnmanagedResources();
+	}
 }

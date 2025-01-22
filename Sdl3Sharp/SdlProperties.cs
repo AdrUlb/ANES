@@ -1,8 +1,8 @@
 namespace Sdl3Sharp;
 
-using static Sdl3Sharp.Internal.Imports;
+using static Imports;
 
-public readonly struct SdlProperties
+public sealed class SdlProperties : IDisposable
 {
 	public readonly struct NumberProp
 	{
@@ -28,21 +28,42 @@ public readonly struct SdlProperties
 	public static readonly PointerProp WindowCreateHeight = new("SDL.window.create.height");
 	public static readonly PointerProp WindowWin32Hwnd = new("SDL.window.win32.hwnd");
 
-	internal readonly uint Id;
+	internal SdlPropertiesId Id;
 
 	public SdlProperties()
 	{
 		Id = SDL_CreateProperties();
 	}
 
-	internal SdlProperties(uint id)
+	internal SdlProperties(SdlPropertiesId id)
 	{
+		SdlErrorException.ThrowIf(id == SdlPropertiesId.Zero);
+
 		Id = id;
 	}
 
 	public static SdlProperties Create() => new(SDL_CreateProperties());
-	public void Destroy() => SDL_DestroyProperties(Id);
 	public void Set(NumberProp prop, long value) => SDL_SetNumberProperty(Id, prop.Name, value);
 	public void Set(PointerProp prop, nint value) => SDL_SetPointerProperty(Id, prop.Name, value);
 	public nint Get(PointerProp prop, nint defaultValue) => SDL_GetPointerProperty(Id, prop.Name, defaultValue);
+
+	private void ReleaseUnmanagedResources()
+	{
+		if (Id == SdlPropertiesId.Zero)
+			return;
+
+		SDL_DestroyProperties(Id);
+		Id = SdlPropertiesId.Zero;
+	}
+
+	public void Dispose()
+	{
+		ReleaseUnmanagedResources();
+		GC.SuppressFinalize(this);
+	}
+
+	~SdlProperties()
+	{
+		ReleaseUnmanagedResources();
+	}
 }

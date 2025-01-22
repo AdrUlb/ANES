@@ -1,62 +1,70 @@
 using System.Drawing;
-using static Sdl3Sharp.Internal.Imports;
+using static Sdl3Sharp.Imports;
 
 namespace Sdl3Sharp;
 
-public sealed class SdlRenderer
+public sealed class SdlRenderer : IDisposable
 {
-	internal readonly nint Handle;
+	internal SdlRendererPtr Ptr;
+	public readonly SdlWindow Window;
 
-	internal SdlRenderer(nint handle)
+	internal SdlRenderer(SdlRendererPtr ptr, SdlWindow window)
 	{
-		if (handle == 0)
-			throw new SdlErrorException();
-
-		Handle = handle;
+		Ptr = ptr;
+		Window = window;
 	}
 
-	public static SdlRenderer Create(SdlWindow window, string name) => new(SDL_CreateRenderer(window.Handle, name));
-	public static SdlRenderer Create(SdlWindow window) => new(SDL_CreateRenderer(window.Handle, 0));
+	public void SetDrawColor(Color color) => SdlErrorException.ThrowIf(!SDL_SetRenderDrawColor(Ptr, color.R, color.G, color.B, color.A));
 
-	public void Destroy() => SDL_DestroyRenderer(Handle);
+	public void SetScale(float scaleX, float scaleY) => SdlErrorException.ThrowIf(!SDL_SetRenderScale(Ptr, scaleX, scaleY));
 
-	public void SetDrawColor(Color color) => SDL_SetRenderDrawColor(Handle, color.R, color.G, color.B, color.A);
+	public void RenderDebugText(float x, float y, string str) => SdlErrorException.ThrowIf(!SDL_RenderDebugText(Ptr, x, y, str));
 
-	public void SetScale(float scaleX, float scaleY)
-	{
-		if (!SDL_SetRenderScale(Handle, scaleX, scaleY))
-			throw new SdlErrorException();
-	}
-
-	public void RenderDebugText(float x, float y, string str) => SDL_RenderDebugText(Handle, x, y, str);
-
-	public void Clear() => SDL_RenderClear(Handle);
-	public void Present() => SDL_RenderPresent(Handle);
+	public void Clear() => SdlErrorException.ThrowIf(!SDL_RenderClear(Ptr));
+	public void Present() => SdlErrorException.ThrowIf(!SDL_RenderPresent(Ptr));
 
 	public unsafe void FillRect(RectangleF rectangle)
 	{
 		var sdlRect = SdlFRect.FromRectangleF(rectangle);
-		SDL_RenderFillRect(Handle, &sdlRect);
+		SdlErrorException.ThrowIf(!SDL_RenderFillRect(Ptr, &sdlRect));
 	}
 
 	public unsafe void SetClipRect(Rectangle rectangle)
 	{
 		var sdlRect = SdlRect.FromRectangle(rectangle);
-		if (!SDL_SetRenderClipRect(Handle, &sdlRect))
-			throw new SdlErrorException();
+		SdlErrorException.ThrowIf(!SDL_SetRenderClipRect(Ptr, &sdlRect));
 	}
 
 	public unsafe void SetClipRect()
 	{
-		if (!SDL_SetRenderClipRect(Handle, null))
-			throw new SdlErrorException();
+		SdlErrorException.ThrowIf(!SDL_SetRenderClipRect(Ptr, null));
 	}
 
 	public int GetVsync()
 	{
-		if (!SDL_GetRenderVSync(Handle, out var vsync))
-			throw new SdlErrorException();
+		SdlErrorException.ThrowIf(!SDL_GetRenderVSync(Ptr, out var vsync));
 
 		return vsync;
+	}
+
+	private void ReleaseUnmanagedResources()
+	{
+		if (Ptr == SdlRendererPtr.Null)
+			return;
+
+		Window.Renderer = null;
+		SDL_DestroyRenderer(Ptr);
+		Ptr = SdlRendererPtr.Null;
+	}
+
+	public void Dispose()
+	{
+		ReleaseUnmanagedResources();
+		GC.SuppressFinalize(this);
+	}
+
+	~SdlRenderer()
+	{
+		ReleaseUnmanagedResources();
 	}
 }

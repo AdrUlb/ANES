@@ -11,13 +11,12 @@ public sealed class AnesSdlPixels : IDisposable
 
 	public AnesSdlPixels(int width, int height, SdlRenderer renderer)
 	{
-		var props = SdlProperties.Create();
+		using var props = SdlProperties.Create();
 		props.Set(SdlProperties.TextureCreateWidth, width);
 		props.Set(SdlProperties.TextureCreateHeight, height);
 		props.Set(SdlProperties.TextureCreateAccess, (long)SdlTextureAccess.Streaming);
 		props.Set(SdlProperties.TextureCreateFormat, (long)SdlPixelFormat.Argb8888);
-		_texture = SdlTexture.CreateWithProperties(renderer, props);
-		props.Destroy();
+		_texture = new SdlTexture(renderer, props);
 		_texture.SetScaleMode(SdlScaleMode.Nearest);
 	}
 
@@ -68,5 +67,5 @@ public sealed class AnesSdlPixels : IDisposable
 
 	~AnesSdlPixels() => Dispose();
 
-	public void Dispose() => _texture.Destroy();
+	public void Dispose() => _texture.Dispose();
 }

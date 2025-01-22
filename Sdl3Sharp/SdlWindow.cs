@@ -1,61 +1,87 @@
 namespace Sdl3Sharp;
 
-using static Sdl3Sharp.Internal.Imports;
+using static Imports;
 
-public sealed class SdlWindow
+public sealed class SdlWindow : IDisposable
 {
-	internal readonly nint Handle;
+	private SdlWindowPtr _ptr;
 
-	private SdlWindow(nint handle)
+	public SdlRenderer? Renderer { get; internal set; }
+
+	private SdlWindow(SdlWindowPtr ptr, SdlRenderer? renderer = null)
 	{
-		if (handle == 0)
-			throw new SdlErrorException();
+		SdlErrorException.ThrowIf(ptr == SdlWindowPtr.Null);
 
-		Handle = handle;
+		_ptr = ptr;
 	}
 
-	public static SdlWindow Create(string title, int width, int height, SdlWindowFlags flags = 0) => new(SDL_CreateWindow(title, width, height, flags));
+	public SdlWindow(SdlWindow parent, int offsetX, int offsetY, int width, int height, SdlWindowFlags flags) :
+		this(SDL_CreatePopupWindow(parent._ptr, offsetX, offsetY, width, height, flags)) { }
 
-	public static SdlWindow CreatePopup(SdlWindow parent, int offsetX, int offsetY, int width, int height, SdlWindowFlags flags = 0) =>
-		new(SDL_CreatePopupWindow(parent.Handle, offsetX, offsetY, width, height, flags));
+	public SdlWindow(SdlProperties props) :
+		this(SDL_CreateWindowWithProperties(props.Id)) { }
 
-	public static SdlWindow CreateWithProperties(SdlProperties props) => new(SDL_CreateWindowWithProperties(props.Id));
-
-	public static (SdlWindow window, SdlRenderer renderer) CreateWithRenderer(string title, int width, int height, SdlWindowFlags flags = 0)
+	public SdlWindow(string title, int width, int height, SdlWindowFlags flags = 0, bool withRenderer = false)
 	{
-		if (!SDL_CreateWindowAndRenderer(title, width, height, flags, out var window, out var renderer))
-			throw new SdlErrorException();
+		if (withRenderer)
+		{
+			SdlErrorException.ThrowIf(!SDL_CreateWindowAndRenderer(title, width, height, flags, out var window, out var renderer));
 
-		return (new(window), new(renderer));
+			_ptr = window;
+			Renderer = new(renderer, this);
+		}
+		else
+		{
+			_ptr = SDL_CreateWindow(title, width, height, flags);
+			if (_ptr == SdlWindowPtr.Null)
+				throw new();
+		}
 	}
 
-	public void Destroy() => SDL_DestroyWindow(Handle);
-	public SdlWindowId GetId() => SDL_GetWindowID(Handle);
-
-	public SdlProperties GetProperties()
+	public SdlRenderer CreateRenderer(string? name = null)
 	{
-		var props = SDL_GetWindowProperties(Handle);
-		if (props == 0)
-			throw new SdlErrorException();
+		var handle = name != null ? SDL_CreateRenderer(_ptr, name) : SDL_CreateRenderer(_ptr, 0);
+		SdlErrorException.ThrowIf(handle == SdlRendererPtr.Null);
 
-		return new(props);
+		Renderer = new(handle, this);
+		return Renderer;
 	}
+
+	public SdlWindowId GetId() => SDL_GetWindowID(_ptr);
+
+	public SdlProperties GetProperties() => new(SDL_GetWindowProperties(_ptr));
+
+	public void Show() => SdlErrorException.ThrowIf(!SDL_ShowWindow(_ptr));
+
+	public void Hide() => SdlErrorException.ThrowIf(!SDL_ShowWindow(_ptr));
+
+	public float GetOpacity() => SDL_GetWindowOpacity(_ptr);
+
+	public bool SetOpacity(float opacity) => SDL_SetWindowOpacity(_ptr, opacity);
 
 	public void SetSize(int width, int height)
 	{
-		if (!SDL_SetWindowSize(Handle, width, height))
-			throw new SdlErrorException();
+		SdlErrorException.ThrowIf(!SDL_SetWindowSize(_ptr, width, height));
 	}
 
-	public void Show()
+	private void ReleaseUnmanagedResources()
 	{
-		if (!SDL_ShowWindow(Handle))
-			throw new SdlErrorException();
+		if (_ptr == SdlWindowPtr.Null)
+			return;
+
+		Renderer?.Dispose();
+		SDL_DestroyWindow(_ptr);
+		_ptr = SdlWindowPtr.Null;
 	}
 
-	public void Hide()
+	public void Dispose()
 	{
-		if (!SDL_ShowWindow(Handle))
-			throw new SdlErrorException();
+		ReleaseUnmanagedResources();
+		GC.SuppressFinalize(this);
+	}
+
+	~SdlWindow()
+	{
+		ReleaseUnmanagedResources();
 	}
 }

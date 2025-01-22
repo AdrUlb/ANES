@@ -1,6 +1,7 @@
 using ANES.Emulation;
 using ANES.Rendering.Sdl3;
 using Sdl3Sharp;
+using System.Diagnostics;
 using System.Drawing;
 
 namespace ANES.Platform.Sdl3;
@@ -22,15 +23,17 @@ internal sealed class App
 	{
 		var width = AnesSdlRenderer.ScreenWidth * _scale;
 		var height = AnesSdlRenderer.ScreenHeight * _scale;
-		(_window, _renderer) = SdlWindow.CreateWithRenderer(
+		_window = new SdlWindow(
 			"ANES",
 			width,
 			height,
-			SdlWindowFlags.Resizable
+			SdlWindowFlags.Resizable,
+			true
 		);
+		_renderer = _window.Renderer ?? throw new UnreachableException();
 		_anesRenderer = new(_nes, _renderer);
 
-		_nes.InsertCartridge("/mnt/ssd_1tb/Roms/NES/smb1.nes");
+		_nes.InsertCartridge(@"C:\Stuff\Roms\NES\smb1.nes");
 		_nes.Reset();
 		_nes.Start();
 
@@ -136,7 +139,7 @@ internal sealed class App
 
 		_nes.Stop();
 		_anesRenderer.Dispose();
-		_renderer.Destroy();
-		_window.Destroy();
+		_renderer.Dispose();
+		_window.Dispose();
 	}
 }
