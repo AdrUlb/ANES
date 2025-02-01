@@ -446,8 +446,8 @@ internal sealed class Cpu(Computer computer)
 	public void Reset()
 	{
 		// TODO: thread safety (setting op mid instruction causes issues)
-		_op = CpuOperation.None;
-		_traceCycles = 0; // Reset trace cycle counting
+		//_op = CpuOperation.None;
+		//_traceCycles = 0; // Reset trace cycle counting
 		_pendingReset = true;
 		_signalInterruptReset = true;
 	}

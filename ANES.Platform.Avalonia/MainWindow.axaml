@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:anes="clr-namespace:ANES.Platform.Avalonia"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Name="ThisWindow"
+        x:Class="ANES.Platform.Avalonia.MainWindow"
+        Title="ANES">
+
+    <DockPanel>
+        <Menu DockPanel.Dock="Top" Focusable="False">
+            <MenuItem Header="_File" Padding="8,4">
+                <MenuItem Header="_Open"
+                          Click="MenuOpen" />
+                <Separator />
+                <MenuItem Header="E_xit"
+                          Click="MenuExit" />
+            </MenuItem>
+            <MenuItem Header="_View" Padding="8,4">
+                <MenuItem Header="_Scale" />
+            </MenuItem>
+            <MenuItem Header="_Debug" Padding="8,4">
+                <MenuItem Header="_Pattern Tables" />
+            </MenuItem>
+            <MenuItem Header="_Help" Padding="8,4">
+                <MenuItem Header="_About" />
+            </MenuItem>
+        </Menu>
+        <anes:NesDisplayControl HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+    </DockPanel>
+
+    <Window.Styles>
+        <Style Selector=":is(Menu)">
+            <Setter Property="Focusable" Value="False"/>
+        </Style>
+        <Style Selector=":is(MenuItem)">
+            <Setter Property="Focusable" Value="False"/>
+        </Style>
+    </Window.Styles>
+</Window>

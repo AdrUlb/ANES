@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace ANES.Platform.WinForms.Controls;
 
-internal class PixelRenderer : Control
+internal sealed class PixelRenderer : Control
 {
 	private readonly int[] _data;
 	private readonly GCHandle _dataHandle;
@@ -36,7 +36,6 @@ internal class PixelRenderer : Control
 			for (var i = 0; i < pixels.Length; i++)
 				_data[i] = pixels[i].ToArgb();
 	}
-
 
 	protected override void OnPaint(PaintEventArgs e)
 	{
